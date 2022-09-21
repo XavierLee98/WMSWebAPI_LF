@@ -14,11 +14,6 @@ namespace WMSWebAPI.Dtos
         public PKL1_Ex[] pKL1_Exs { get; set; }
         public OIBT[] oIBTs { get; set; }
 
-        //SO
-        public List<ORDR_Ex2> oRDRs2 { get; set; } = new List<ORDR_Ex2>();
-        public RDR1_Ex[] rDR1s { get; set; }
-        public ORDR_Ex[] oRDRs { get; set; }
-
         //ReserveInvoice
         public OINV_Ex[] OINVs { get; set; }
         public INV1_Ex[] iNV1s { get; set; } 
@@ -28,7 +23,6 @@ namespace WMSWebAPI.Dtos
         public PickerModel picker { get; set; }
         public Driver driver { get; set; }
         public Truck truck { get; set; }
-
 
 
         public PickerModel[] pickers { get; set; }

@@ -31,6 +31,16 @@ namespace WMSWebAPI.Models.PickList
         public List<BatchAllocateDocView> AllocatedBatches { get; set; } = new List<BatchAllocateDocView>();
 
 
+        //Refactored New Code
+        public int VisOrder { get; set; }
+        public int BaseDocNum { get; set; }
 
+        public string WhsCode { get; set; }
+        public string CardCode { get; set; }
+        public string CardName { get; set; }
+        public decimal ItemWeight { get; set; }
+
+        public char ManBtchNum { get; set; }
+        public char ManSerNum { get; set; }
     }
 }

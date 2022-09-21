@@ -532,8 +532,8 @@ namespace WMSWebAPI.SAP_SQL.PickList
                 var queryfour = "SELECT MIN(T0.LogEntry) AS SnBAllocateViewLogEntry, T0.AllocateTp AS SnBAllocateViewDocType, T0.AllocatEnt AS SnBAllocateViewDocEntry, T0.AllocateLn AS SnBAllocateViewDocLine, T0.ManagedBy AS SnBAllocateViewMngBy, " +
                             "T1.MdAbsEntry AS SnBAllocateViewSnbMdAbs, T1.ItemCode AS SnBAllocateViewItemCode, T1.SysNumber AS SnBAllocateViewSnbSysNum, T0.LocCode AS SnBAllocateViewLocCode, SUM(T1.AllocQty) AS SnBAllocateViewAllocQty, T2.DistNumber  " +
                             "FROM dbo.OITL AS T0 WITH (NOLOCK) " +
-                            "INNER JOIN dbo.ITL1 WITH (NOLOCK) AS T1 ON T1.LogEntry = T0.LogEntry " +
-                            "INNER JOIN dbo.OBTN WITH (NOLOCK) AS T2 ON T1.MdAbsEntry = T2.AbsEntry " +
+                            "INNER JOIN dbo.ITL1 AS T1 WITH (NOLOCK) ON T1.LogEntry = T0.LogEntry " +
+                            "INNER JOIN dbo.OBTN AS T2 WITH (NOLOCK) ON T1.MdAbsEntry = T2.AbsEntry " +
                             "WHERE  (T1.AllocQty <> 0) and  T0.AllocateTp = 17 AND T0.AllocatEnt = @AllocatEnt " +
                             "GROUP BY T0.AllocateTp, T0.AllocatEnt, T0.AllocateLn, T0.ManagedBy, T1.MdAbsEntry, T1.ItemCode, T1.SysNumber, T0.LocCode, T0.DocEntry, T0.DocLine, T0.DocNum, T2.DistNumber " +
                             "HAVING(SUM(T1.AllocQty) > 0); ";

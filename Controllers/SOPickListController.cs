@@ -534,6 +534,7 @@ namespace WMSWebAPI.Controllers
                 using var list = new SQL_OPKL(_dbConnectionStr);
                 cio.IsEnableItemValidate = list.GetValidateItemConfiguration();
                 _lastErrorMessage = list.LastErrorMessage;
+
                 if (_lastErrorMessage.Length > 0)
                 {
                     return BadRequest(_lastErrorMessage);

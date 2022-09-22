@@ -141,7 +141,7 @@ namespace WMSWebAPI.Controllers
                 {
                     return BadRequest(_lastErrorMessage);
                 }
-                result = sqllist.DeleteBatchVarianceForSingleItem(bag.PickItemLine);
+                result = sqllist.DeleteBatchVarianceForSingleItem(bag.PickItemLine, bag.oBTQs);
                 _lastErrorMessage = sqllist.LastErrorMessage;
                 if (result < 0)
                 {

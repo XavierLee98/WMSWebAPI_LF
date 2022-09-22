@@ -311,7 +311,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
         /// </summary>
         /// <param name="bag"></param>
         /// <returns></returns>
-        public int DeleteBatchVarianceForSingleItem(PKL1_Ex pkl1Line)
+        public int DeleteBatchVarianceForSingleItem(PKL1_Ex pkl1Line,List<OBTQ_Ex> oBTQs)
         {
             try
             {
@@ -320,7 +320,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
                 using (var conn = new SqlConnection(databaseConnStr))
                 {
 
-                    foreach (var line in pkl1Line.oBTQList)
+                    foreach (var line in oBTQs)
                     {
                         result = conn.Execute(query, new { AbsEntry = pkl1Line.AbsEntry, Batch = line.DistNumber, ItemCode = pkl1Line.ItemCode });
                     }
@@ -516,7 +516,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
                 int result = -1;
                 using (var conn = new SqlConnection(sapConnStr))
                 {
-                    result = conn.Execute(query, new { AbsEntry = PickHead.AbsEntry });
+                    result = conn.Execute(query, new { AbsEntry = PickHead.AbsEntry }, commandTimeout: 0);
                     return result;
                 }
 
@@ -542,7 +542,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
                 int result = -1;
                 using (var conn = new SqlConnection(sapConnStr))
                 {
-                    result = conn.Execute(query, new { Picker = picker, AbsEntry = PickHead.AbsEntry });
+                    result = conn.Execute(query, new { Picker = picker, AbsEntry = PickHead.AbsEntry },commandTimeout:0);
                     return result;
                 }
 

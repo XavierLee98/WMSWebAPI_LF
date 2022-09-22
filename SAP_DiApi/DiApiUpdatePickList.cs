@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Dapper;
 using Microsoft.Extensions.Configuration;
@@ -59,6 +60,10 @@ namespace WMSWebAPI.SAP_DiApi
                     LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
                     return -1;
                 }
+                
+                if (oDocuments != null) Marshal.ReleaseComObject(oDocuments);
+                oDocuments = null;
+
                 return RetVal;
             }
             catch (Exception e)
@@ -102,12 +107,16 @@ namespace WMSWebAPI.SAP_DiApi
                     if (_company.oCom.InTransaction)
                         _company.oCom.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                     LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
+                    if (oDocuments != null) Marshal.ReleaseComObject(oDocuments);
+                    oDocuments = null;
                     return -1;
                 }
                 else
                 {
                     if (_company.oCom.InTransaction)
                         _company.oCom.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+                    if (oDocuments != null) Marshal.ReleaseComObject(oDocuments);
+                    oDocuments = null;
                     return RetVal;
                 }
             }
@@ -158,12 +167,20 @@ namespace WMSWebAPI.SAP_DiApi
                     if (_company.oCom.InTransaction)
                         _company.oCom.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                     LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
+
+                    if (oDocuments != null) Marshal.ReleaseComObject(oDocuments);
+                    oDocuments = null;
+
                     return -1;
                 }
                 else
                 {
                     if (_company.oCom.InTransaction)
                         _company.oCom.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_Commit);
+
+                    if (oDocuments != null) Marshal.ReleaseComObject(oDocuments);
+                    oDocuments = null;
+
                     return RetVal;
                 }
             }
@@ -191,7 +208,7 @@ namespace WMSWebAPI.SAP_DiApi
 
                 SAPbobsCOM.Documents oDocuments = null;
                 int RetVal = 0;
-                var docEntryList = pKL1s.Select(x => x.OrderEntry).Distinct().ToList();
+                var docEntryList = pKL1s.Where(y=>  y.PickStatus != "C").Select(x => x.OrderEntry).Distinct().ToList();
                 if (docEntryList == null)
                 {
                     LastErrorMessage = "Fail Remove Batch in Sale Order.\n";
@@ -229,6 +246,10 @@ namespace WMSWebAPI.SAP_DiApi
                         if (_company.oCom.InTransaction)
                             _company.oCom.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                         LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
+
+                        if (oDocuments != null) Marshal.ReleaseComObject(oDocuments);
+                        oDocuments = null;
+
                         return -1;
                     }
                 }
@@ -238,6 +259,10 @@ namespace WMSWebAPI.SAP_DiApi
                     if (_company.oCom.InTransaction)
                         _company.oCom.EndTransaction(SAPbobsCOM.BoWfTransOpt.wf_RollBack);
                     LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
+
+                    if (oDocuments != null) Marshal.ReleaseComObject(oDocuments);
+                    oDocuments = null;
+
                     return -1;
                 }
                 else
@@ -285,8 +310,16 @@ namespace WMSWebAPI.SAP_DiApi
                 if (RetVal != 0)
                 {
                     LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
+
+                    if (oPickLists != null) Marshal.ReleaseComObject(oPickLists);
+                    oPickLists = null;
+
                     return -1;
                 }
+
+                if (oPickLists != null) Marshal.ReleaseComObject(oPickLists);
+                oPickLists = null;
+
                 return RetVal;
             }
             catch (Exception e)

@@ -335,34 +335,8 @@ namespace WMSWebAPI.SAP_SQL.PickList
             }
         }
 
-        /// <summary>
-        /// Get Item Details
-        /// </summary>
-        /// <param name="bag"></param>
-        public List<OITM_Ex> GetItemdetails(Cio bag)
-        {
-            try
-            {
-                var queryUpdate = "SELECT * FROM OITM " +
-                                  "WHERE ItemCode = @ItemCode; ";
 
-                using (var conn = new SqlConnection(databaseConnStr))
-                {
-                    List<OITM_Ex> Items = new List<OITM_Ex>();
-                    foreach (var line in bag.pKL1List)
-                    {
-                        Items.AddRange(conn.Query<OITM_Ex>(queryUpdate, new { ItemCode = line.ItemCode }).ToList());
-                    }
-                    return Items;
-                }
 
-            }
-            catch (Exception excep)
-            {
-                LastErrorMessage = $"{excep}";
-                return null;
-            }
-        }
 
         /// <summary>
         //Insert Batch Variance for record
@@ -950,6 +924,31 @@ namespace WMSWebAPI.SAP_SQL.PickList
 //                return dtoopkl;
 //            }
 //        }
+//    }
+//    catch (Exception excep)
+//    {
+//        LastErrorMessage = $"{excep}";
+//        return null;
+//    }
+//}
+
+//public List<OITM_Ex> GetItemdetails(Cio bag)
+//{
+//    try
+//    {
+//        var queryUpdate = "SELECT * FROM OITM " +
+//                          "WHERE ItemCode = @ItemCode; ";
+
+//        using (var conn = new SqlConnection(databaseConnStr))
+//        {
+//            List<OITM_Ex> Items = new List<OITM_Ex>();
+//            foreach (var line in bag.pKL1List)
+//            {
+//                Items.AddRange(conn.Query<OITM_Ex>(queryUpdate, new { ItemCode = line.ItemCode }).ToList());
+//            }
+//            return Items;
+//        }
+
 //    }
 //    catch (Exception excep)
 //    {

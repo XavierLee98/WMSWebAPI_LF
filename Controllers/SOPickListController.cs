@@ -75,18 +75,18 @@ namespace WMSWebAPI.Controllers
                         {
                             return HandleUpdatePickListHeader(bag);
                         }
-                    case "HandleRemoveSOBatchAllocation":
-                        {
-                            return HandleRemoveSOBatchAllocation(bag);
-                        }
+                    //case "HandleRemoveSOBatchAllocation":
+                    //    {
+                    //        return HandleRemoveSOBatchAllocation(bag);
+                    //    }
                     case "RemoveSingleBatchAllocation":
                         {
                             return RemoveSingleBatchAllocation(bag);
                         }
-                    case "RemoveAllBatchesForSingleItem":
-                        {
-                            return RemoveAllBatchesForSingleItem(bag);
-                        }
+                    //case "RemoveAllBatchesForSingleItem":
+                    //    {
+                    //        return RemoveAllBatchesForSingleItem(bag);
+                    //    }
                     case "UpdateValidateItemConfiguration":
                         {
                             return UpdateValidateItemConfiguration(bag);
@@ -107,10 +107,10 @@ namespace WMSWebAPI.Controllers
                         {
                             return UpdatePicker(bag);
                         }
-                    case "GetItemdetails":
-                        {
-                            return GetItemdetails(bag);
-                        }
+                    //case "GetItemdetails":
+                    //    {
+                    //        return GetItemdetails(bag);
+                    //    }
                 }
                 return BadRequest($"Invalid request, please try again later. Thanks");
             }
@@ -127,40 +127,40 @@ namespace WMSWebAPI.Controllers
         /// </summary>
         /// <param name="bag"></param>
         /// <returns></returns>
-        private IActionResult RemoveAllBatchesForSingleItem(Cio bag)
-        {
-            try
-            {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-                using var list = new DiApiUpdatePickList(_configuration,_dbMidwareConnectionStr,_company);
-                using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
+        //private IActionResult RemoveAllBatchesForSingleItem(Cio bag)
+        //{
+        //    try
+        //    {
+        //        var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
+        //        using var list = new DiApiUpdatePickList(_configuration,_dbMidwareConnectionStr,_company);
+        //        using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
 
-                int result = list.SORemoveAllBatchesForSingleItem(bag.PickItemLine);
-                _lastErrorMessage = list.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-                result = sqllist.DeleteBatchVarianceForSingleItem(bag.PickItemLine, bag.oBTQs);
-                _lastErrorMessage = sqllist.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-                result = sqllist.RemoveMultiBatch(bag.PickItemLine, bag.oBTQs);
-                _lastErrorMessage = sqllist.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-                return Ok();
-            }
-            catch (Exception excep)
-            {
-                Log($"{excep}", bag);
-                return BadRequest($"{excep}");
-            }
-        }
+        //        int result = list.SORemoveAllBatchesForSingleItem(bag.PickItemLine);
+        //        _lastErrorMessage = list.LastErrorMessage;
+        //        if (result < 0)
+        //        {
+        //            return BadRequest(_lastErrorMessage);
+        //        }
+        //        result = sqllist.DeleteBatchVarianceForSingleItem(bag.PickItemLine, bag.oBTQs);
+        //        _lastErrorMessage = sqllist.LastErrorMessage;
+        //        if (result < 0)
+        //        {
+        //            return BadRequest(_lastErrorMessage);
+        //        }
+        //        result = sqllist.RemoveMultiBatch(bag.PickItemLine, bag.oBTQs);
+        //        _lastErrorMessage = sqllist.LastErrorMessage;
+        //        if (result < 0)
+        //        {
+        //            return BadRequest(_lastErrorMessage);
+        //        }
+        //        return Ok();
+        //    }
+        //    catch (Exception excep)
+        //    {
+        //        Log($"{excep}", bag);
+        //        return BadRequest($"{excep}");
+        //    }
+        //}
 
         /// <summary>
         /// Update Pick List Header
@@ -190,46 +190,42 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        /// <summary>
         /// Remove Allocation Batch Item (SO)
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
-        private IActionResult HandleRemoveSOBatchAllocation(Cio bag)
-        {
-            try
-            {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
-                using var list = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
-                using var midwarelist = new SQL_OPKL(_dbConnectionStr, _dbMidwareConnectionStr);
+        //private IActionResult HandleRemoveSOBatchAllocation(Cio bag)
+        //{
+        //    try
+        //    {
+        //        var _dbConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
+        //        using var list = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
+        //        using var midwarelist = new SQL_OPKL(_dbConnectionStr, _dbMidwareConnectionStr);
 
-                int result = list.RemoveBatchAllocationSOPickList(bag.pKL1List);
-                _lastErrorMessage = list.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-                result = midwarelist.DeleteBatchVarianceForAllItem(bag.pKL1List);
-                _lastErrorMessage = midwarelist.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-                result = midwarelist.RemoveAllBatchesforPickList(bag.pKL1List);
-                _lastErrorMessage = midwarelist.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
+        //        int result = list.RemoveBatchAllocationSOPickList(bag.pKL1List);
+        //        _lastErrorMessage = list.LastErrorMessage;
+        //        if (result < 0)
+        //        {
+        //            return BadRequest(_lastErrorMessage);
+        //        }
+        //        result = midwarelist.DeleteBatchVarianceForAllItem(bag.pKL1List);
+        //        _lastErrorMessage = midwarelist.LastErrorMessage;
+        //        if (result < 0)
+        //        {
+        //            return BadRequest(_lastErrorMessage);
+        //        }
+        //        result = midwarelist.RemoveAllBatchesforPickList(bag.pKL1List);
+        //        _lastErrorMessage = midwarelist.LastErrorMessage;
+        //        if (result < 0)
+        //        {
+        //            return BadRequest(_lastErrorMessage);
+        //        }
 
-                return Ok();
-            }
-            catch (Exception excep)
-            {
-                Log($"{excep}", bag);
-                return BadRequest($"{excep}");
-            }
-        }
+        //        return Ok();
+        //    }
+        //    catch (Exception excep)
+        //    {
+        //        Log($"{excep}", bag);
+        //        return BadRequest($"{excep}");
+        //    }
+        //}
 
         /// <summary>
         /// Cancel Allocation for single Batch Item (SO)
@@ -285,14 +281,7 @@ namespace WMSWebAPI.Controllers
                 using var sqllist = new SQL_OPKL(_dbConnectionStr);
                 int result = -1;
 
-                result = diapilist.SORemoveAllBatchesForSingleItem(bag.PickItemLine);
-                _lastErrorMessage = diapilist.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-
-                result = diapilist.AssignBatchToSo(bag.PickItemLine, bag.oBTQs);
+                result = diapilist.AssignBatchToSo(bag.PickItemLine, bag.oBTQ);
                 _lastErrorMessage = diapilist.LastErrorMessage;
                 if (result < 0)
                 {
@@ -414,32 +403,27 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Get Item Details
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
-        private IActionResult GetItemdetails(Cio bag)
-        {
-            try
-            {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-                using var list = new SQL_OPKL(_dbConnectionStr);
-                var dtoPKL = new DTO_OPKL();
-                bag.ItemDetails = list.GetItemdetails(bag);
-                _lastErrorMessage = list.LastErrorMessage;
-                if (!String.IsNullOrWhiteSpace(_lastErrorMessage))
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-                return Ok(bag);
-            }
-            catch (Exception excep)
-            {
-                Log($"{excep}", bag);
-                return BadRequest($"{excep}");
-            }
-        }
+        //private IActionResult GetItemdetails(Cio bag)
+        //{
+        //    try
+        //    {
+        //        var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
+        //        using var list = new SQL_OPKL(_dbConnectionStr);
+        //        var dtoPKL = new DTO_OPKL();
+        //        bag.ItemDetails = list.GetItemdetails(bag);
+        //        _lastErrorMessage = list.LastErrorMessage;
+        //        if (!String.IsNullOrWhiteSpace(_lastErrorMessage))
+        //        {
+        //            return BadRequest(_lastErrorMessage);
+        //        }
+        //        return Ok(bag);
+        //    }
+        //    catch (Exception excep)
+        //    {
+        //        Log($"{excep}", bag);
+        //        return BadRequest($"{excep}");
+        //    }
+        //}
 
         /// <summary>
         /// Insert Batch Variance

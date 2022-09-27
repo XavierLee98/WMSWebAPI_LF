@@ -43,6 +43,7 @@ namespace WMSWebAPI.SAP_DiApi
                     throw new Exception(_company.errMsg);
 
                 SAPbobsCOM.Documents oDocuments = null;
+
                 oDocuments = (SAPbobsCOM.Documents)_company.oCom.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
 
                 oDocuments.GetByKey(pickLine.OrderEntry);
@@ -59,7 +60,16 @@ namespace WMSWebAPI.SAP_DiApi
                     {
                         oDocuments.Lines.BatchNumbers.SetCurrentLine(v);
 
-                        if (oDocuments.Lines.BatchNumbers.BatchNumber == batch.DistNumber) oDocuments.Lines.BatchNumbers.Quantity = 0;
+                        if (oDocuments.Lines.BatchNumbers.BatchNumber == batch.DistNumber)
+                        {
+                            if(oDocuments.Lines.BatchNumbers.Quantity <= double.Parse(batch.TransferBatchQty.ToString()))
+                            {
+                                oDocuments.Lines.BatchNumbers.Quantity = 0;
+                                continue;
+                            }
+
+                            oDocuments.Lines.BatchNumbers.Quantity -= double.Parse(batch.TransferBatchQty.ToString());
+                        } 
                     }
                 }
 
@@ -160,7 +170,7 @@ namespace WMSWebAPI.SAP_DiApi
 
                 if(!string.IsNullOrEmpty(oDocuments.Lines.BatchNumbers.BatchNumber)) oDocuments.Lines.BatchNumbers.Add();
                 oDocuments.Lines.BatchNumbers.BatchNumber = batch.DistNumber;
-                oDocuments.Lines.BatchNumbers.Quantity = (double)batch.TransferBatchQty;
+                oDocuments.Lines.BatchNumbers.Quantity += (double)batch.TransferBatchQty;
 
                 int RetVal = oDocuments.Update();
 

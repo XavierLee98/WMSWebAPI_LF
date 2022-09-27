@@ -36,115 +36,6 @@ namespace WMSWebAPI.SAP_SQL.PickList
             sapConnStr = _SapConnStr;
         }
 
-        /// <summary>
-        /// Remove all Onhold Batch for all item
-        /// </summary>
-        /// <param name="pKL1s"></param>
-        /// <returns></returns>
-        public int RemoveAllBatchesforPickList(PKL1_Ex[] pKL1s)
-        {
-            try
-            {
-                var query = "Delete [dbo].[zmwSOHoldPickItem] WHERE PickListDocEntry = @PickDoc and Batch = @Batch and ItemCode = @ItemCode";
-                int result = -1;
-                using (var conn = new SqlConnection(databaseConnStr))
-                {
-                    foreach (var pkl1line in pKL1s)
-                    {
-                        foreach (var i in pkl1line.oBTQList)
-                        {
-                            result = conn.Execute(query, new { PickDoc = pkl1line.AbsEntry, Batch = i.DistNumber, ItemCode = pkl1line.ItemCode });
-                        }
-                    }
-
-                    return result;
-                }
-
-            }
-            catch (Exception excep)
-            {
-                LastErrorMessage = $"{excep}";
-                return -1;
-            }
-        }
-
-        /// <summary>
-        /// Remove multi Onhold Batch for single item line
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
-        public int RemoveMultiBatch(PKL1_Ex pkl1Line,List<OBTQ_Ex> oBTQs)
-        {
-            try
-            {
-                var query = "Delete [dbo].[zmwSOHoldPickItem] WHERE PickListDocEntry = @PickDoc and Batch = @Batch and ItemCode = @ItemCode";
-                int result = -1;
-                using (var conn = new SqlConnection(databaseConnStr))
-                {
-                    foreach(var line in oBTQs)
-                    {
-                        result = conn.Execute(query, new { PickDoc = pkl1Line.AbsEntry, Batch = line.DistNumber, ItemCode = pkl1Line.ItemCode });
-                    }
-                    return result;
-                }
-            }
-            catch (Exception excep)
-            {
-                LastErrorMessage = $"{excep}";
-                return -1;
-            }
-        }
-
-        /// <summary>
-        /// Remove Single Onhold Batch
-        /// </summary>
-        /// <param name="PickDoc"></param>
-        /// <returns></returns>
-        public int RemoveHoldingSingleBatch(PKL1_Ex pickLine, OBTQ_Ex batch)
-        {
-            try 
-            {
-                var query = "Delete [dbo].[zmwSOHoldPickItem] WHERE PickListDocEntry = @PickDoc and Batch = @Batch and ItemCode = @ItemCode";
-
-                using (var conn = new SqlConnection(databaseConnStr))
-                {
-                    int result = conn.Execute(query, new { PickDoc = pickLine.AbsEntry, Batch = batch.DistNumber, ItemCode = pickLine.ItemCode });
-                    return result;
-                }
-
-            }
-            catch (Exception excep)
-            {
-                LastErrorMessage = $"{excep}";
-                return -1;
-            }
-        }
-
-        /// <summary>
-        /// Remove Onhold Batch
-        /// </summary>
-        /// <param name="PickDoc"></param>
-        /// <returns></returns>
-        public int RemoveHoldingBatchesForSingleItem(Cio bag)
-        {
-            try
-            {
-                var query = "Delete [dbo].[zmwSOHoldPickItem] WHERE PickDoc = @PickDoc and ItemCode = @ItemCode";
-
-                using (var conn = new SqlConnection(databaseConnStr))
-                {
-                    int result = conn.Execute(query, new { PickDoc = bag.PickItemLine.PickEntry, ItemCode = bag.PickItemLine.ItemCode });
-                    return result;
-                }
-
-            }
-            catch (Exception excep)
-            {
-                LastErrorMessage = $"{excep}";
-                return -1;
-            }
-        }
-
         public List<PKL1_Ex> GetPickDetails(int PickDoc)
         {
             try
@@ -159,13 +50,20 @@ namespace WMSWebAPI.SAP_SQL.PickList
 
                 foreach (var line in result)
                 {
+
                     if (line.ManBtchNum == 'Y')
                     {
                         line.oBTQList = new List<OBTQ_Ex>();
-                        line.oBTQList = GetAllocatedBatchItem(line);
+
+                        if(line.PickStatus == "Y")
+                        {
+                            line.oBTQList = GetBatchItemAfterPicked(line);
+                            continue;
+                        }
+
+                        line.oBTQList = GetOnholdBatches_Released(line);
                     }
                 }
-
                 return result;
             }
             catch (Exception e)
@@ -175,7 +73,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
             }
         }
 
-        public List<OBTQ_Ex> GetAllocatedBatchItem(PKL1_Ex PickItemLine)
+        public List<OBTQ_Ex> GetOnholdBatches_Released(PKL1_Ex PickItemLine)
         {
             var SAPConn = new SqlConnection(databaseConnStr);
 
@@ -184,11 +82,38 @@ namespace WMSWebAPI.SAP_SQL.PickList
             if (PickItemLine == null) throw new Exception("Pick Detail Line not found [Batch]. Please try again");
 
 
-            var result = SAPConn.Query<AllocatedItem>("zwa_IMApp_PickList_spGetBatchSerialAllocation", 
-                                                       new { DocEntry = PickItemLine.OrderEntry, DocLineNum = PickItemLine.OrderLine }, 
+            var result = SAPConn.Query<HoldPickItem>("zwa_IMApp_PickList_spGetOnholdBatch",
+                new { PickListDocEntry = PickItemLine.AbsEntry , PickListLineNum = PickItemLine.PickEntry },
+                commandType: CommandType.StoredProcedure, commandTimeout: 0).ToList();
+
+            if(result == null) return null;
+
+            foreach(var line in result)
+            {
+                oBTQs.Add(new OBTQ_Ex 
+                {
+                    ItemCode = line.ItemCode,
+                    DistNumber = line.Batch,
+                    TransferBatchQty = line.Quantity
+                });
+            }
+
+            return oBTQs;
+        }
+
+        public List<OBTQ_Ex> GetBatchItemAfterPicked(PKL1_Ex PickItemLine)
+        {
+            var SAPConn = new SqlConnection(databaseConnStr);
+
+            List<OBTQ_Ex> oBTQs = new List<OBTQ_Ex>();
+
+            if (PickItemLine == null) throw new Exception("Pick Detail Line not found [Batch]. Please try again");
+
+
+            var result = SAPConn.Query<AllocatedItem>("zwa_IMApp_PickList_spGetAllocatedBatch", 
+                                                       new { DocEntry = PickItemLine.AbsEntry, DocLineNum = PickItemLine.PickEntry }, 
                                                        commandType: CommandType.StoredProcedure, 
                                                        commandTimeout:0).ToList();
-
             foreach (var line in result)
             {
                 if (line.ManagedBy == 10000044)
@@ -205,6 +130,31 @@ namespace WMSWebAPI.SAP_SQL.PickList
                 }
             }
             return oBTQs;
+        }
+
+        /// <summary>
+        /// Remove Single Onhold Batch
+        /// </summary>
+        /// <param name="PickDoc"></param>
+        /// <returns></returns>
+        public int RemoveHoldingSingleBatch(PKL1_Ex pickLine, OBTQ_Ex batch)
+        {
+            try
+            {
+                var query = "Delete [dbo].[zmwSOHoldPickItem] WHERE PickListDocEntry = @PickDoc and PickListLineNum = @PickLineNo and Batch = @Batch and ItemCode = @ItemCode";
+
+                using (var conn = new SqlConnection(databaseConnStr))
+                {
+                    int result = conn.Execute(query, new { PickDoc = pickLine.AbsEntry, PickLineNo = pickLine.PickEntry, Batch = batch.DistNumber, ItemCode = pickLine.ItemCode });
+                    return result;
+                }
+
+            }
+            catch (Exception excep)
+            {
+                LastErrorMessage = $"{excep}";
+                return -1;
+            }
         }
 
         /// <summary>

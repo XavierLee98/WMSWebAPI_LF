@@ -7,6 +7,7 @@ namespace WMSWebAPI.Models.PickList
 {
     public class HoldPickItem
     {
+        public int Id { get; set; }
         public int SODocEntry { get; set; }
         public int SOLineNum { get; set; }
         public int PickListDocEntry { get; set; }

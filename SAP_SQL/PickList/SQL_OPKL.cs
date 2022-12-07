@@ -40,7 +40,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
         {
             try
             {
-                var SAPConn = new SqlConnection(databaseConnStr);
+                var SAPConn = new SqlConnection(sapConnStr);
 
                 var result = SAPConn.Query<PKL1_Ex>("zwa_IMApp_PickList_spGetPickDetails", 
                                                      new { PickId = PickDoc }, 
@@ -75,7 +75,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
 
         public List<OBTQ_Ex> GetOnholdBatches_Released(PKL1_Ex PickItemLine)
         {
-            var SAPConn = new SqlConnection(databaseConnStr);
+            var SAPConn = new SqlConnection(sapConnStr);
 
             List<OBTQ_Ex> oBTQs = new List<OBTQ_Ex>();
 
@@ -103,7 +103,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
 
         public List<OBTQ_Ex> GetBatchItemAfterPicked(PKL1_Ex PickItemLine)
         {
-            var SAPConn = new SqlConnection(databaseConnStr);
+            var SAPConn = new SqlConnection(sapConnStr);
 
             List<OBTQ_Ex> oBTQs = new List<OBTQ_Ex>();
 
@@ -160,15 +160,15 @@ namespace WMSWebAPI.SAP_SQL.PickList
         /// <summary>
         /// Get all SO Pick Lists 
         /// </summary>
-        public OPKL_Ex[] GetOPKLLists(DateTime startDate, DateTime endDate)
+        public OPKL_Ex[] GetOPKLLists(DateTime startDate, DateTime endDate, string QueryWhs)
         {
             try
             {
 
-                using (var conn = new SqlConnection(databaseConnStr))
+                using (var conn = new SqlConnection(sapConnStr))
                 {
                     return conn.Query<OPKL_Ex>("zwa_IMApp_PickList_spGetPickList", 
-                                                new { StartDate = startDate, EndDate = endDate },
+                                                new { StartDate = startDate, EndDate = endDate, QueryWhs = QueryWhs },
                                                 commandType: CommandType.StoredProcedure, 
                                                 commandTimeout:0).ToArray();
                 }
@@ -436,7 +436,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
         {
             try
             {
-                var query = "Update OPKL SET U_PICKER = '-' WHERE AbsEntry = @AbsEntry";
+                var query = "Update OPKL SET U_PICKER = '' WHERE AbsEntry = @AbsEntry";
                 int result = -1;
                 using (var conn = new SqlConnection(sapConnStr))
                 {
@@ -517,7 +517,32 @@ namespace WMSWebAPI.SAP_SQL.PickList
                 {
                     return conn.Query<string>(query).FirstOrDefault();
                 }
+            }
+            catch (Exception excep)
+            {
+                LastErrorMessage = $"{excep}";
+                return null;
+            }
+        }
 
+        public DTO_OPKL GetPickHeadProperties(Cio bag)
+        {
+            try
+            {
+                DTO_OPKL dTO_OPKL = new DTO_OPKL();
+                var querypicker = "SELECT * FROM [dbo].[@PICKER] WHERE Code = @PickerCode;";
+                var querydriver = "SELECT * FROM [dbo].[@DRIVER] WHERE Code = @DriverCode;";
+                var querytrucknum = "SELECT * FROM [dbo].[@TRUCK] WHERE Code = @TruckCode;";
+                using (var conn = new SqlConnection(sapConnStr))
+                {
+                    using (var multi = conn.QueryMultiple(querypicker + " " + querydriver + " " + querytrucknum, new { PickerCode = bag.PickHead.U_Picker, DriverCode = bag.PickHead.U_Driver, TruckCode = bag.PickHead.U_TruckNo }))
+                    {
+                        dTO_OPKL.picker = multi.Read<PickerModel>().FirstOrDefault();
+                        dTO_OPKL.driver = multi.Read<Driver>().FirstOrDefault();
+                        dTO_OPKL.truck = multi.Read<Truck>().FirstOrDefault();
+                    }
+                }
+                return dTO_OPKL;
             }
             catch (Exception excep)
             {

@@ -6,8 +6,10 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Data.SqlClient;
 using WMSWebAPI.Class;
+using WMSWebAPI.Dtos;
 using WMSWebAPI.Models;
 using WMSWebAPI.Models.Users;
+using WMSWebAPI.SAP_SQL;
 
 namespace WMSWebAPI.Controllers
 {
@@ -16,11 +18,12 @@ namespace WMSWebAPI.Controllers
     public class LOGINController : ControllerBase
     {        
         readonly string _dbMidwareName = "DatabaseFTMiddleware"; // 20200612T1030
-
+        readonly string _sapdb = "DatabaseWMSConn";
         readonly IConfiguration _configuration;
         ILogger _logger;
         FileLogger _fileLogger = new FileLogger();        
         string _dbMidwareConnectionStr = string.Empty;
+        string _dbSAPconn = string.Empty;
         string _lastErrorMessage = string.Empty;
 
         /// <summary>
@@ -32,6 +35,7 @@ namespace WMSWebAPI.Controllers
         {
             _configuration = configuration;            
             _dbMidwareConnectionStr = _configuration.GetConnectionString(_dbMidwareName);
+            _dbSAPconn = _configuration.GetConnectionString(_sapdb);
             _logger = logger;
         }
 
@@ -52,9 +56,13 @@ namespace WMSWebAPI.Controllers
                         {
                             return ProcessLogin(bag);                            
                         }
-                    case "ResetPassword":  // 20200716T2209, for app user to reset it own password
+                    case "ResetPassword":  
                         {
                             return ResetPassword(bag);
+                        }
+                    case "GetBpAndWarehouse":
+                        {
+                            return GetBpAndWarehouse(bag);
                         }
                 }
                 return BadRequest($"Invalid request, please try again later. Thanks");
@@ -65,6 +73,41 @@ namespace WMSWebAPI.Controllers
                 return BadRequest($"{excep}");
             }
         }
+
+
+        IActionResult GetBpAndWarehouse(Cio cio)
+        {
+            try
+            {
+                var dto = new DTO_Master();
+                using var whs = new SQL_OWHS(_dbSAPconn);
+                using var so = new SQL_ORDR(_dbSAPconn);
+
+                //dto.Bp = so.QueryBp();
+                //_lastErrorMessage = so.LastErrorMessage;
+                //if (_lastErrorMessage.Length > 0)
+                //{
+                //    return BadRequest(_lastErrorMessage);
+                //}
+
+                dto.dtoWhs = whs.GetWarehouses();    
+                dto.DtoBins = whs.GetWarehousesObin();
+                _lastErrorMessage = whs.LastErrorMessage;
+                if (_lastErrorMessage.Length > 0)
+                {
+                    return BadRequest(_lastErrorMessage);
+                }
+
+                return Ok(dto);
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", cio);
+                return BadRequest($"{excep}");
+            }
+        }
+
+
 
         /// <summary>
         /// App Login process after token generation

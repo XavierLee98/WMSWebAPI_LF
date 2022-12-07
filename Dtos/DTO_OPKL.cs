@@ -11,7 +11,7 @@ namespace WMSWebAPI.Dtos
 
         public OPKL_Ex OPKL { get; set; }
         public OPKL_Ex[] OPKLs { get; set; }
-        public PKL1_Ex[] pKL1_Exs { get; set; }
+        public List<PKL1_Ex> pKL1s { get; set; }
         public OIBT[] oIBTs { get; set; }
 
         //ReserveInvoice
@@ -24,9 +24,11 @@ namespace WMSWebAPI.Dtos
         public Driver driver { get; set; }
         public Truck truck { get; set; }
 
-
         public PickerModel[] pickers { get; set; }
+        public OWHS[] WarehouseList { get; set; }
         public Driver[] drivers { get; set; }
         public Truck[] trucks { get; set; }
+        public string IsEnableItemValidate { get; set; }
+
     }
 }

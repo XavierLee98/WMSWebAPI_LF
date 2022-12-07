@@ -24,14 +24,14 @@ namespace WMSWebAPI.Controllers
         ILogger _logger;
         FileLogger _fileLogger = new FileLogger();
         SAPCompany _company;
-        string _dbConnectionStr = string.Empty;
+        string _sapConnectionStr = string.Empty;
         string _dbMidwareConnectionStr = string.Empty;
         string _lastErrorMessage = string.Empty;
 
         public SOPickListController(IConfiguration configuration, ILogger<PickListController> logger, SAPCompany company)
         {
             _configuration = configuration;
-            _dbConnectionStr = _configuration.GetConnectionString(_dbName);
+            _sapConnectionStr = _configuration.GetConnectionString(_dbName);
             _dbMidwareConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
             _logger = logger;
             _company = company;
@@ -51,6 +51,10 @@ namespace WMSWebAPI.Controllers
                 _lastErrorMessage = string.Empty;
                 switch (bag.request)
                 {
+                    case "GetAllPickListAndWarehouse":
+                        {
+                            return GetAllPickListAndWarehouse(bag);
+                        }
                     case "GetAllPickList":
                         {
                             return GetPickList(bag);
@@ -75,18 +79,10 @@ namespace WMSWebAPI.Controllers
                         {
                             return HandleUpdatePickListHeader(bag);
                         }
-                    //case "HandleRemoveSOBatchAllocation":
-                    //    {
-                    //        return HandleRemoveSOBatchAllocation(bag);
-                    //    }
                     case "RemoveSingleBatchAllocation":
                         {
                             return RemoveSingleBatchAllocation(bag);
                         }
-                    //case "RemoveAllBatchesForSingleItem":
-                    //    {
-                    //        return RemoveAllBatchesForSingleItem(bag);
-                    //    }
                     case "UpdateValidateItemConfiguration":
                         {
                             return UpdateValidateItemConfiguration(bag);
@@ -107,10 +103,6 @@ namespace WMSWebAPI.Controllers
                         {
                             return UpdatePicker(bag);
                         }
-                    //case "GetItemdetails":
-                    //    {
-                    //        return GetItemdetails(bag);
-                    //    }
                 }
                 return BadRequest($"Invalid request, please try again later. Thanks");
             }
@@ -131,7 +123,7 @@ namespace WMSWebAPI.Controllers
         //{
         //    try
         //    {
-        //        var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
+        //        var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
         //        using var list = new DiApiUpdatePickList(_configuration,_dbMidwareConnectionStr,_company);
         //        using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
 
@@ -171,7 +163,6 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
                 using var list = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
 
                 int result = list.UpdatePickListHeader( bag.PickHead);
@@ -195,9 +186,9 @@ namespace WMSWebAPI.Controllers
         //{
         //    try
         //    {
-        //        var _dbConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
+        //        var _sapConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
         //        using var list = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
-        //        using var midwarelist = new SQL_OPKL(_dbConnectionStr, _dbMidwareConnectionStr);
+        //        using var midwarelist = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr);
 
         //        int result = list.RemoveBatchAllocationSOPickList(bag.pKL1List);
         //        _lastErrorMessage = list.LastErrorMessage;
@@ -236,7 +227,6 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
                 using var list = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
                 using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
 
@@ -276,9 +266,8 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
                 using var diapilist = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr, _company);
-                using var sqllist = new SQL_OPKL(_dbConnectionStr);
+                using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
                 int result = -1;
 
                 result = diapilist.AssignBatchToSo(bag.PickItemLine, bag.oBTQ);
@@ -287,12 +276,14 @@ namespace WMSWebAPI.Controllers
                 {
                     return BadRequest(_lastErrorMessage);
                 }
+
                 result = sqllist.InsertHoldingBatch(bag.PickItemLine, bag.oBTQ);
                 _lastErrorMessage = sqllist.LastErrorMessage;
                 if (result < 0)
                 {
                     return BadRequest(_lastErrorMessage);
                 }
+
                 return Ok();
             }
             catch (Exception excep)
@@ -311,7 +302,7 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _dbConnectionStr);
+                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr);
                 var batches = list.GetAvailableBatches(bag.ItemCodeInput,bag.QueryWhs);
                 _lastErrorMessage = list.LastErrorMessage;
 
@@ -337,10 +328,36 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                using var list = new SQL_OPKL( _dbConnectionStr, _dbMidwareConnectionStr);
-                var pkl1s = list.GetPickDetails(bag.PickDoc);
+                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr);
 
-                return Ok(pkl1s);
+                var dto = new DTO_OPKL();
+
+                dto.pKL1s = list.GetPickDetails(bag.PickHead.AbsEntry);
+                _lastErrorMessage = list.LastErrorMessage;
+                if (_lastErrorMessage.Length > 0)
+                {
+                    return BadRequest(_lastErrorMessage);
+                }
+
+                dto.IsEnableItemValidate = list.GetValidateItemConfiguration();
+                _lastErrorMessage = list.LastErrorMessage;
+                if (_lastErrorMessage.Length > 0)
+                {
+                    return BadRequest(_lastErrorMessage);
+                }
+
+                var tempdto = list.GetPickHeadProperties(bag);
+                _lastErrorMessage = list.LastErrorMessage;
+                if (_lastErrorMessage.Length > 0)
+                {
+                    return BadRequest(_lastErrorMessage);
+                }
+
+                dto.picker = tempdto.picker;
+                dto.driver = tempdto.driver;
+                dto.truck = tempdto.truck;
+
+                return Ok(dto);
             }
             catch (Exception excep)
             {
@@ -358,10 +375,38 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbName); 
-                using var list = new SQL_OPKL(_dbConnectionStr);
+                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr);
+                var OPKLs = list.GetOPKLLists(bag.QueryStartDate,bag.QueryEndDate, bag.QueryWhs);
+                _lastErrorMessage = list.LastErrorMessage;
+                if (_lastErrorMessage.Length > 0)
+                {
+                    return BadRequest(_lastErrorMessage);
+                }
+                return Ok(OPKLs);
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", bag);
+                return BadRequest($"{excep}");
+            }
+        }
+        private IActionResult GetAllPickListAndWarehouse(Cio bag)
+        {
+            try
+            {
+                using var list = new SQL_OPKL(_dbMidwareConnectionStr,_sapConnectionStr);
                 var dtoPKL = new DTO_OPKL();
-                dtoPKL.OPKLs = list.GetOPKLLists(bag.QueryStartDate,bag.QueryEndDate);
+
+                dtoPKL.WarehouseList = list.GetPickWarehouse();
+                _lastErrorMessage = list.LastErrorMessage;
+                if (_lastErrorMessage.Length > 0)
+                {
+                    return BadRequest(_lastErrorMessage);
+                }
+
+                var firstWhs = dtoPKL.WarehouseList.FirstOrDefault();
+
+                dtoPKL.OPKLs = list.GetOPKLLists(bag.QueryStartDate, bag.QueryEndDate, firstWhs.WhsCode);
                 _lastErrorMessage = list.LastErrorMessage;
                 if (_lastErrorMessage.Length > 0)
                 {
@@ -385,7 +430,7 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _dbConnectionStr);
+                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr);
 
                 int result = list.UpdatePicker(bag.QueryPicker, bag.PickHead);
                 _lastErrorMessage = list.LastErrorMessage;
@@ -407,8 +452,8 @@ namespace WMSWebAPI.Controllers
         //{
         //    try
         //    {
-        //        var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-        //        using var list = new SQL_OPKL(_dbConnectionStr);
+        //        var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
+        //        using var list = new SQL_OPKL(_sapConnectionStr);
         //        var dtoPKL = new DTO_OPKL();
         //        bag.ItemDetails = list.GetItemdetails(bag);
         //        _lastErrorMessage = list.LastErrorMessage;
@@ -434,7 +479,7 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _dbConnectionStr);
+                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr);
 
                 int result = list.InsertBatchVariance(bag.SinglebatchVariance);
                 _lastErrorMessage = list.LastErrorMessage;
@@ -460,7 +505,7 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _dbConnectionStr);
+                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr);
 
                 int result = list.ResetPicker(bag.PickHead);
                 _lastErrorMessage = list.LastErrorMessage;
@@ -487,8 +532,7 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
-                using var list = new SQL_OPKL(_dbConnectionStr);
+                using var list = new SQL_OPKL(_sapConnectionStr);
                 int result = list.UpdateValidateItemConfiguration(bag.IsEnableItemValidate);
                 _lastErrorMessage = list.LastErrorMessage;
                 if (result < 0)
@@ -514,8 +558,8 @@ namespace WMSWebAPI.Controllers
             try
             {
                 Cio cio = new Cio();
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
-                using var list = new SQL_OPKL(_dbConnectionStr);
+                using var list = new SQL_OPKL(_sapConnectionStr);
+
                 cio.IsEnableItemValidate = list.GetValidateItemConfiguration();
                 _lastErrorMessage = list.LastErrorMessage;
 
@@ -540,7 +584,7 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                using (var updateCount = new SQL_OPKL(_dbConnectionStr, _dbMidwareConnectionStr))
+                using (var updateCount = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr))
                 {
                     var result = updateCount.CreateUpdatePickList_Midware(
                         bag.dtoRequest, bag.dtoGRPO, bag.dtoItemBins);
@@ -589,8 +633,8 @@ namespace WMSWebAPI.Controllers
 //    {
 //        try
 //        {
-//            var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-//            using var list = new SQL_OPKL(_dbConnectionStr, _dbMidwareConnectionStr);
+//            var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
+//            using var list = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr);
 //            var dtoPKL = new DTO_OPKL();
 //            dtoPKL = list.GetPickDetailsFromSOWithOnholdBatch(bag.PickDoc);
 //            _lastErrorMessage = list.LastErrorMessage;
@@ -617,7 +661,7 @@ namespace WMSWebAPI.Controllers
 //{
 //    try
 //    {
-//        using var list = new SQL_OPKL(_dbConnectionStr, _dbMidwareConnectionStr);
+//        using var list = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr);
 //        var dtoPKL = new DTO_OPKL();
 //        dtoPKL = list.GetPickDetailsFromSOWithBatch(bag.PickDoc);
 //        _lastErrorMessage = list.LastErrorMessage;
@@ -647,9 +691,9 @@ namespace WMSWebAPI.Controllers
 //{
 //    try
 //    {
-//        var _dbConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
+//        var _sapConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
 //        using var diapilist = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
-//        using var midwarelist = new SQL_OPKL(_dbConnectionStr, _dbMidwareConnectionStr);
+//        using var midwarelist = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr);
 
 //        var result = diapilist.PartialUpdatePickList(bag.PickDoc, bag.pKL1List,bag.PickHead);
 //        _lastErrorMessage = diapilist.LastErrorMessage;

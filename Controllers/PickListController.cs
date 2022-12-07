@@ -27,14 +27,14 @@ namespace WMSWebAPI.Controllers
         ILogger _logger;
 
         FileLogger _fileLogger = new FileLogger();
-        string _dbConnectionStr = string.Empty;
+        string _sapConnectionStr = string.Empty;
         string _dbMidwareConnectionStr = string.Empty;
         string _lastErrorMessage = string.Empty;
 
         public PickListController(IConfiguration configuration, ILogger<PickListController> logger)
         {
             _configuration = configuration;
-            _dbConnectionStr = _configuration.GetConnectionString(_dbName);
+            _sapConnectionStr = _configuration.GetConnectionString(_dbName);
             _dbMidwareConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
             _logger = logger;
         }
@@ -64,14 +64,6 @@ namespace WMSWebAPI.Controllers
                         {
                             return GetPicker(bag);
                         }
-                    case "QuerySelectDetails":
-                        {
-                            return GetSelectDetails(bag);
-                        }
-                    case "QueryPickWarehouse":
-                        {
-                            return GetPickWarehouse(bag);
-                        }
                 }
                 return BadRequest($"Invalid request, please try again later. Thanks");
             }
@@ -87,60 +79,26 @@ namespace WMSWebAPI.Controllers
         /// </summary>
         /// <param name="bag"></param>
         /// <returns></returns>
-        private IActionResult GetPickWarehouse(Cio bag)
-        {
-            try
-            {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-                using var list = new SQL_OPKL(_dbMidwareConnectionStr);
-                bag.dtoWhs = list.GetPickWarehouse();
-                _lastErrorMessage = list.LastErrorMessage;
-                if (_lastErrorMessage == null)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-                return Ok(bag);
-            }
-            catch (Exception excep)
-            {
-                Log($"{excep}", bag);
-                return BadRequest($"{excep}");
-            }
-        }
-
-
-        /// <summary>
-        /// Get Selected pi
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
-        private IActionResult GetSelectDetails(Cio bag)
-        {
-            try
-            {
-                DTO_OPKL dTO_OPKL = new DTO_OPKL();
-                var querypicker = "SELECT * FROM [dbo].[@PICKER] WHERE Code = @PickerCode;";
-                var querydriver = "SELECT * FROM [dbo].[@DRIVER] WHERE Code = @DriverCode;";
-                var querytrucknum = "SELECT * FROM [dbo].[@TRUCK] WHERE Code = @TruckCode;";
-                using (var conn = new SqlConnection(_dbConnectionStr))
-                {
-                    using (var multi = conn.QueryMultiple(querypicker + " " +  querydriver + " " + querytrucknum, new { PickerCode = bag.PickHead.U_Picker, DriverCode = bag.PickHead.U_Driver, TruckCode = bag.PickHead.U_TruckNo }))
-                    {
-                        dTO_OPKL.picker = multi.Read<PickerModel>().FirstOrDefault();
-                        dTO_OPKL.driver = multi.Read<Driver>().FirstOrDefault();
-                        dTO_OPKL.truck = multi.Read<Truck>().FirstOrDefault();
-                    }
-                }
-
-
-                return Ok(dTO_OPKL);
-            }
-            catch (Exception excep)
-            {
-                Log($"{excep}", bag);
-                return BadRequest($"{excep}");
-            }
-        }
+        //private IActionResult GetPickWarehouse(Cio bag)
+        //{
+        //    try
+        //    {
+        //        var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
+        //        using var list = new SQL_OPKL(_dbMidwareConnectionStr);
+        //        bag.dtoWhs = list.GetPickWarehouse();
+        //        _lastErrorMessage = list.LastErrorMessage;
+        //        if (_lastErrorMessage.Length>0)
+        //        {
+        //            return BadRequest(_lastErrorMessage);
+        //        }
+        //        return Ok(bag);
+        //    }
+        //    catch (Exception excep)
+        //    {
+        //        Log($"{excep}", bag);
+        //        return BadRequest($"{excep}");
+        //    }
+        //}
 
         /// <summary>
         /// Get Picker
@@ -151,12 +109,11 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-                using var list = new SQL_OPKL(_dbConnectionStr);
+                using var list = new SQL_OPKL(_sapConnectionStr);
                 var dtoPKL = new DTO_OPKL();
                 dtoPKL.pickers = list.GetPickers();
                 _lastErrorMessage = list.LastErrorMessage;
-                if (_lastErrorMessage == null)
+                if (_lastErrorMessage.Length>0)
                 {
                     return BadRequest(_lastErrorMessage);
                 }
@@ -178,12 +135,11 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-                using var list = new SQL_OPKL(_dbConnectionStr);
+                using var list = new SQL_OPKL(_sapConnectionStr);
                 var dtoPKL = new DTO_OPKL();
                 dtoPKL.trucks = list.GetTrucks(bag);
                 _lastErrorMessage = list.LastErrorMessage;
-                if (_lastErrorMessage == null)
+                if (_lastErrorMessage.Length>0)
                 {
                     return BadRequest(_lastErrorMessage);
                 }
@@ -205,12 +161,11 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-                using var list = new SQL_OPKL(_dbConnectionStr);
+                using var list = new SQL_OPKL(_sapConnectionStr);
                 var dtoPKL = new DTO_OPKL();
                 dtoPKL.drivers = list.GetDrivers(bag);
                 _lastErrorMessage = list.LastErrorMessage;
-                if (_lastErrorMessage == null)
+                if (_lastErrorMessage.Length>0)
                 {
                     return BadRequest(_lastErrorMessage);
                 }
@@ -237,8 +192,8 @@ namespace WMSWebAPI.Controllers
 //    {
 //        try
 //        {
-//            var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-//            using var list = new SQL_OPKL(_dbConnectionStr);
+//            var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
+//            using var list = new SQL_OPKL(_sapConnectionStr);
 //            var dtoPKL = new DTO_OPKL();
 //            dtoPKL.oRDRs2 = list.GetSOs(bag);
 //            _lastErrorMessage = list.LastErrorMessage;
@@ -260,7 +215,7 @@ namespace WMSWebAPI.Controllers
 //    {
 //        try
 //        {
-//            using var requestHelp = new InsertRequestHelper(_dbConnectionStr, _dbNameMidware);
+//            using var requestHelp = new InsertRequestHelper(_sapConnectionStr, _dbNameMidware);
 //            var result = requestHelp.CreateRequest(
 //                bag.dtoRequest, bag.dtoGRPO, bag.dtoItemBins, bag.dtozmwDocHeaderField);
 
@@ -290,8 +245,8 @@ namespace WMSWebAPI.Controllers
 //    {
 //        try
 //        {
-//            var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-//            using var list = new SQL_OPKL(_dbConnectionStr);
+//            var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
+//            using var list = new SQL_OPKL(_sapConnectionStr);
 //            var dtoPKL = new DTO_OPKL();
 //            dtoPKL.pKL1_Exs = list.GetPKL1FromInvoice(bag.PickDoc);
 //            _lastErrorMessage = list.LastErrorMessage;
@@ -317,7 +272,7 @@ namespace WMSWebAPI.Controllers
 //    {
 //        try
 //        {
-//            var _dbConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
+//            var _sapConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
 //            using var list = new DiApiUpdatePickList();
 //            int result = list.ReserveInvoiceToPickList(bag.InvoiceDoc);
 //            _lastErrorMessage = list.LastErrorMessage;
@@ -345,7 +300,7 @@ namespace WMSWebAPI.Controllers
 //    {
 //        try
 //        {
-//            var _dbConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
+//            var _sapConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
 //            using var list = new DiApiUpdatePickList();
 
 //            int result = list.PartialUpdatePickList(bag.PickDoc,bag.pKL1List, bag.PickHead);
@@ -373,7 +328,7 @@ namespace WMSWebAPI.Controllers
 //    {
 //        try
 //        {
-//            var _dbConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
+//            var _sapConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
 //            using var list = new DiApiUpdatePickList();
 
 //            int result = list.AssignBatchToSo(bag.PickItemLine, bag.oIBT, bag.Picked);
@@ -400,8 +355,8 @@ namespace WMSWebAPI.Controllers
 //    {
 //        try
 //        {
-//            var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-//            using var list = new SQL_OPKL(_dbConnectionStr);
+//            var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
+//            using var list = new SQL_OPKL(_sapConnectionStr);
 //            var dtoPKL = new DTO_OPKL();
 //            dtoPKL.oIBTs = list.getOIBTs(bag.ItemCodeInput);
 //            _lastErrorMessage = list.LastErrorMessage;
@@ -427,8 +382,8 @@ namespace WMSWebAPI.Controllers
 //    {
 //        try
 //        {
-//            var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-//            using var list = new SQL_OPKL(_dbConnectionStr);
+//            var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
+//            using var list = new SQL_OPKL(_sapConnectionStr);
 //            var dtoPKL = new DTO_OPKL();
 //             dtoPKL.OPKL = list.GetSingleOPKL(bag.PickDoc);
 //            _lastErrorMessage = list.LastErrorMessage;
@@ -454,8 +409,8 @@ namespace WMSWebAPI.Controllers
 //    {
 //        try
 //        {
-//            var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-//            using var list = new SQL_OPKL(_dbConnectionStr);
+//            var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
+//            using var list = new SQL_OPKL(_sapConnectionStr);
 //            var dtoPKL = new DTO_OPKL();
 //            dtoPKL.pKL1_Exs = list.GetPKL1FromSo(bag.PickDoc);
 //            _lastErrorMessage = list.LastErrorMessage;
@@ -481,8 +436,8 @@ namespace WMSWebAPI.Controllers
 //    {
 //        try
 //        {
-//            var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
-//            using var list = new SQL_OPKL(_dbConnectionStr);
+//            var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
+//            using var list = new SQL_OPKL(_sapConnectionStr);
 //            var dtoPKL = new DTO_OPKL();
 //            dtoPKL.OPKLs = list.GetOPKLLists(bag);
 //            _lastErrorMessage = list.LastErrorMessage;

@@ -22,5 +22,8 @@ namespace WMSWebAPI.Models.Demo
         public bool IsPickedItem { get; set; }
 
         public decimal TransferBatchQty { get; set; }
+
+        public DateTime? ExpDate { get; set; }
+        public string Status { get; set; }
     }
 }

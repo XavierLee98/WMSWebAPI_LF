@@ -10,12 +10,14 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using WMSWebAPI.Class;
 using WMSWebAPI.Dtos;
 using WMSWebAPI.Interface;
 using WMSWebAPI.Models;
 using WMSWebAPI.Models.Authentcation;
 using WMSWebAPI.Models.SAP_DiApi;
 using WMSWebAPI.SAP_DiApi;
+using WMSWebAPI.SAP_SQL;
 
 namespace WMSWebAPI.Controllers
 {
@@ -51,6 +53,22 @@ namespace WMSWebAPI.Controllers
             using (var company = new DiApiGetCompanyList(_configuration))
             {
                 return (String.IsNullOrWhiteSpace(company.lastErrorMessage)) ? company.companyNameList : null;
+            }
+        }
+
+        [AllowAnonymous]
+        [HttpGet("GetAppInfo")]
+        public IActionResult GetAppInfo()
+        {
+            try
+            {
+                var versioncontrol = new SQL_VersionControl(_dbConnString);
+
+                return Ok(versioncontrol.GetAppInfo());
+            }
+            catch (Exception excep)
+            {
+                return BadRequest(excep.Message);
             }
         }
 

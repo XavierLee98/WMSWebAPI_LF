@@ -8,6 +8,7 @@ using WMSWebAPI.Class;
 using System.Transactions;
 using WMSWebAPI.Models.Demo.Transfer1;
 using WMSWebAPI.Models.GRPO;
+using System.Data;
 
 namespace WMSWebAPI.SAP_SQL
 {
@@ -46,6 +47,12 @@ namespace WMSWebAPI.SAP_SQL
         {
             using var conn = new SqlConnection(databaseConnStr);
             return conn.Query<NNM1>("SELECT * FROM NNM1 WHERE ObjectCode = '67'").ToArray();
+        }
+
+        public OPLN[] GetTransferPriceList()
+        {
+            using var conn = new SqlConnection(databaseConnStr);
+            return conn.Query<OPLN>("SELECT T0.* FROM OPLN T0 INNER JOIN [@APPPRICELIST] T1 ON T0.ListName = T1.Name WHERE U_Module = 'OWTR'; ").ToArray();
         }
 
         /// <summary>
@@ -573,36 +580,54 @@ namespace WMSWebAPI.SAP_SQL
                     }
                     #endregion
 
+                    #region Update the Header
+                    result = conn.Execute("sp_Transfer1_UpdatezmwTransferDocHeader",
+                        new
+                        {
+                            Guid = bag.dtoRequest.guid,
+                            Series = bag.dtozmwDocHeaderField.Series,
+                            JrnlMemo = bag.dtozmwDocHeaderField.JrnlMemo,
+                            PriceList = bag.dtozmwDocHeaderField.PriceList,
+                            Comments = bag.dtozmwDocHeaderField.Comments
+                        },
+                        commandType: CommandType.StoredProcedure);
+                    if (result <= 0)
+                    {
+                        LastErrorMessage = "Fail Update TransferDocHeader";
+                        return -1;
+                    }
+                    #endregion
+
                     // insert the doc heade details 
                     #region insert zmwDocHeaderField
-                    if (bag.dtozmwDocHeaderField != null)
-                    {
-                        string insertdocHeaderfield =
-                                $"INSERT INTO {nameof(zmwDocHeaderField)}(" +
-                                $" Guid " +
-                                $",DocSeries " +
-                                $",Ref2 " +
-                                $",Comments " +
-                                $",JrnlMemo " +
-                                $",NumAtCard" +
-                                $",Series" +
-                                $") VALUES (" +
-                                $"@Guid " +
-                                $",@DocSeries " +
-                                $",@Ref2 " +
-                                $",@Comments " +
-                                $",@JrnlMemo " +
-                                $",@NumAtCard" +
-                                $",@Series" +
-                                $")";
+                    //if (bag.dtozmwDocHeaderField != null)
+                    //{
+                    //    string insertdocHeaderfield =
+                    //            $"INSERT INTO {nameof(zmwDocHeaderField)}(" +
+                    //            $" Guid " +
+                    //            $",DocSeries " +
+                    //            $",Ref2 " +
+                    //            $",Comments " +
+                    //            $",JrnlMemo " +
+                    //            $",NumAtCard" +
+                    //            $",Series" +
+                    //            $") VALUES (" +
+                    //            $"@Guid " +
+                    //            $",@DocSeries " +
+                    //            $",@Ref2 " +
+                    //            $",@Comments " +
+                    //            $",@JrnlMemo " +
+                    //            $",@NumAtCard" +
+                    //            $",@Series" +
+                    //            $")";
 
-                        result = conn.Execute(insertdocHeaderfield, bag.dtozmwDocHeaderField);
-                        if (result <= 0)
-                        {
-                            LastErrorMessage = "Fail insert the transfer doc header fields info";
-                            return -1;
-                        }
-                    }
+                    //    result = conn.Execute(insertdocHeaderfield, bag.dtozmwDocHeaderField);
+                    //    if (result <= 0)
+                    //    {
+                    //        LastErrorMessage = "Fail insert the transfer doc header fields info";
+                    //        return -1;
+                    //    }
+                    //}
 
                     #endregion
 

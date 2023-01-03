@@ -18,6 +18,7 @@ namespace WMSWebAPI.Models.GRPO
         public string Comments { get; set; }
         public string JrnlMemo { get; set; }
         public string NumAtCard { get; set; }
+        public string PriceList { get; set; }
         public string GIReasonCode { get; set; }
         public string GIReasonName { get; set; }
     }

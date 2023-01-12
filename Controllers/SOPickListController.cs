@@ -103,6 +103,10 @@ namespace WMSWebAPI.Controllers
                         {
                             return UpdatePicker(bag);
                         }
+                    case "ResetPickList":
+                        {
+                            return ResetPickList(bag);
+                        }
                 }
                 return BadRequest($"Invalid request, please try again later. Thanks");
             }
@@ -163,9 +167,14 @@ namespace WMSWebAPI.Controllers
         {
             try
             {
-                using var list = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
+                using var list = new SQL_OPKL(_dbMidwareConnectionStr,_sapConnectionStr);
 
-                int result = list.UpdatePickListHeader( bag.PickHead);
+                //using var list = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
+
+                //int result = list.UpdatePickListHeader( bag.PickHead);//zwa_IMApp_PickList_spUpdatePickHeader
+                //_lastErrorMessage = list.LastErrorMessage;
+
+                int result = list.UpdatePickHeader(bag.PickHead);//zwa_IMApp_PickList_spUpdatePickHeader
                 _lastErrorMessage = list.LastErrorMessage;
 
                 if (result < 0)
@@ -242,12 +251,12 @@ namespace WMSWebAPI.Controllers
                 {
                     return BadRequest(_lastErrorMessage);
                 }
-                result = sqllist.RemoveHoldingSingleBatch(bag.PickItemLine, bag.oBTQ);
-                _lastErrorMessage = sqllist.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
+                //result = sqllist.RemoveHoldingSingleBatch(bag.PickItemLine, bag.oBTQ);
+                //_lastErrorMessage = sqllist.LastErrorMessage;
+                //if (result < 0)
+                //{
+                //    return BadRequest(_lastErrorMessage);
+                //}
                 return Ok();
             }
             catch (Exception excep)
@@ -277,12 +286,12 @@ namespace WMSWebAPI.Controllers
                     return BadRequest(_lastErrorMessage);
                 }
 
-                result = sqllist.InsertHoldingBatch(bag.PickItemLine, bag.oBTQ);
-                _lastErrorMessage = sqllist.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
+                //result = sqllist.InsertHoldingBatch(bag.PickItemLine, bag.oBTQ);
+                //_lastErrorMessage = sqllist.LastErrorMessage;
+                //if (result < 0)
+                //{
+                //    return BadRequest(_lastErrorMessage);
+                //}
 
                 return Ok();
             }
@@ -568,6 +577,31 @@ namespace WMSWebAPI.Controllers
                     return BadRequest(_lastErrorMessage);
                 }
                 return Ok(cio);
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", bag);
+                return BadRequest($"{excep}");
+            }
+        }
+
+        IActionResult ResetPickList(Cio bag)
+        {
+            try
+            {
+                using (var updateCount = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr))
+                {
+                    var result = updateCount.ResetPickList_Midware(bag.dtoRequest);
+
+                    _lastErrorMessage = updateCount.LastErrorMessage;
+                }
+
+                if (string.IsNullOrWhiteSpace(_lastErrorMessage))
+                {
+                    return Ok(bag);
+                }
+
+                return BadRequest(_lastErrorMessage);
             }
             catch (Exception excep)
             {

@@ -23,6 +23,8 @@ namespace WMSWebAPI.Models
         public int sysId { get; set; }
         public string companyId { get; set; }
         public string userIdName { get; set; }
+        public string AppVersion { get; set; }
+        public string AppName { get; set; }
         public string password { get; set; }
         public string sapId { get; set; }
         public string displayName { get; set; }

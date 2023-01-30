@@ -90,9 +90,16 @@ namespace WMSWebAPI.Controllers
                 var secKey = _configuration.GetSection("AppSettings").GetSection("Secret").Value;
                 var decrytKey = _configuration.GetSection("AppSettings").GetSection("DecrytKey").Value;
 
+                var versioncontrol = new SQL_VersionControl(_dbConnString);
+
+                if (!versioncontrol.CheckAppVersion(zwaUser.AppName, zwaUser.AppVersion, out string AppUrl))
+                {
+                    return new ObjectResult(AppUrl) { StatusCode = 403};
+                }
+
                 if (!user.VerifiedLogin(secKey, decrytKey))
                 {
-                    return BadRequest("Invalid login");
+                    return Unauthorized("Invalid login");
                 }
 
                     // authentication successful so generate jwt token

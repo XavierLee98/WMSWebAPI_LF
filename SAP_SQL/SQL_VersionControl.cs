@@ -28,6 +28,23 @@ namespace WMSWebAPI.SAP_SQL
             var conn = new SqlConnection(midwareConnStr);
             var query = "SELECT * FROM VersionControl";
             return conn.Query<VersionControl>(query).FirstOrDefault();
+        }
+
+        public bool CheckAppVersion(string AppName, string appVersion, out string url)
+        {
+            url = "";
+            var conn = new SqlConnection(midwareConnStr);
+            var query = "SELECT * FROM VersionControl WHERE AppName = @appName";
+            var result = conn.Query<VersionControl>(query, new { appName = AppName }).FirstOrDefault();
+
+            url = result.APKSourceUrl;
+
+            if (result == null) return false;
+
+            if (result.AppVersion != appVersion) return false;
+
+
+            return true;
 
         }
     }

@@ -18,6 +18,8 @@ namespace WMSWebAPI.SAP_DiApi
     public class DiApiUpdatePickList : IDisposable
     {
         public void Dispose() => GC.Collect();
+        readonly string _success = "Success";
+        readonly string _fail = "Fail";
         public string LastErrorMessage { get; private set; }
         string _dbConnectionStr;
         IConfiguration _configuration;
@@ -77,9 +79,10 @@ namespace WMSWebAPI.SAP_DiApi
                 if (RetVal != 0)
                 {
                     LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
+                    InsertPickAlloactedLog(pickLine, batch, "Remove", _fail, LastErrorMessage);
                     return -1;
                 }
-                InsertPickAlloactedLog(pickLine, batch, "Remove");
+                InsertPickAlloactedLog(pickLine, batch, "Remove", _success, LastErrorMessage);
 
                 if (oDocuments != null) Marshal.ReleaseComObject(oDocuments);
                 oDocuments = null;
@@ -89,6 +92,7 @@ namespace WMSWebAPI.SAP_DiApi
             catch (Exception e)
             {
                 LastErrorMessage = $"{e.Message} \n";
+                InsertPickAlloactedLog(pickLine, batch, "Remove", _fail, LastErrorMessage);
                 return -1;
             }
         }
@@ -127,15 +131,20 @@ namespace WMSWebAPI.SAP_DiApi
                 if (RetVal != 0)
                 {
                     LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
+                    InsertPickAlloactedLog(pKL1Line, batch, "Insert", _fail, LastErrorMessage);
+
                     return -1;
                 }
 
-                InsertPickAlloactedLog(pKL1Line, batch, "Insert");
+                InsertPickAlloactedLog(pKL1Line, batch, "Insert", _success, LastErrorMessage);
+
                 return RetVal;
             }
             catch (Exception e)
             {
                 LastErrorMessage = $"{e.Message} \n";
+                InsertPickAlloactedLog(pKL1Line, batch, "Insert", _fail, LastErrorMessage);
+
                 return -1;
             }
             finally
@@ -145,7 +154,7 @@ namespace WMSWebAPI.SAP_DiApi
             }
         }
 
-        void InsertPickAlloactedLog(PKL1_Ex pKL1Line, OBTQ_Ex batch, string action)
+        void InsertPickAlloactedLog(PKL1_Ex pKL1Line, OBTQ_Ex batch, string action, string status, string errmsg)
         {
             try
             {
@@ -163,6 +172,8 @@ namespace WMSWebAPI.SAP_DiApi
                         Batch = batch.DistNumber,
                         Quantity = batch.TransferBatchQty,
                         PickAction = action,
+                        status = status,
+                        Errormsg = errmsg
                     },
                     commandType: System.Data.CommandType.StoredProcedure);
             }

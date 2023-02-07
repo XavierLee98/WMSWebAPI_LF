@@ -9,6 +9,7 @@ using System.Transactions;
 using WMSWebAPI.Models.Demo.Transfer1;
 using WMSWebAPI.Models.GRPO;
 using System.Data;
+using WMSWebAPI.Models.Lifewater;
 
 namespace WMSWebAPI.SAP_SQL
 {
@@ -49,10 +50,10 @@ namespace WMSWebAPI.SAP_SQL
             return conn.Query<NNM1>("SELECT * FROM NNM1 WHERE ObjectCode = '67'").ToArray();
         }
 
-        public OPLN[] GetTransferPriceList()
+        public OPLN_Ex[] GetTransferPriceList()
         {
             using var conn = new SqlConnection(databaseConnStr);
-            return conn.Query<OPLN>("SELECT T0.* FROM OPLN T0 INNER JOIN [@APPPRICELIST] T1 ON T0.ListName = T1.Name WHERE U_Module = 'OWTR'; ").ToArray();
+            return conn.Query<OPLN_Ex>("SELECT T0.ListNum, T0.ListName, T1.U_Module, T1.U_Value FROM OPLN T0 INNER JOIN [@APPPRICELIST] T1 ON T0.ListName = T1.U_Value WHERE U_Module = 'OWTR'; ").ToArray();
         }
 
         /// <summary>

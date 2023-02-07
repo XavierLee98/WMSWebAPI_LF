@@ -65,9 +65,13 @@ namespace WMSWebAPI.Controllers
                         {
                             return CreateInventoryRequest(bag);
                         }
-                    case "GetDocSeries":
+                    //case "GetDocSeries":
+                    //    {
+                    //        return GetDocSeries(bag);
+                    //    }
+                    case "GetDocSeriesAndPriceList":
                         {
-                            return GetDocSeries(bag);
+                            return GetDocSeriesAndPriceList(bag);
                         }
                         //case "QueryWhsQty":
                         //    {
@@ -125,19 +129,30 @@ namespace WMSWebAPI.Controllers
         /// </summary>
         /// <param name="bag"></param>
         /// <returns></returns>
-        IActionResult GetDocSeries(Cio bag)
+        IActionResult GetDocSeriesAndPriceList(Cio bag)
         {
             try
             {
                 using (var request = new SQL_OWTQ(_dbConnectionStr, _dbConnectionStr_Mid, _MidDbName))
                 {
                     var dtoOwtq = new DtoOwtq();
+
                     dtoOwtq.DocSeries = request.GetDocSeries();
 
-                    _lastErrorMessage = request.LastErrorMessage;
-                    if (string.IsNullOrWhiteSpace(_lastErrorMessage))
-                        return Ok(dtoOwtq);
-                    return BadRequest(_lastErrorMessage);
+                    if (!string.IsNullOrEmpty(request.LastErrorMessage))
+                    {
+                        _lastErrorMessage = request.LastErrorMessage;
+                        return BadRequest(_lastErrorMessage);
+                    }
+
+                    dtoOwtq.PriceList = request.GetTransferPriceList();
+                    if (!string.IsNullOrEmpty(request.LastErrorMessage))
+                    {
+                        _lastErrorMessage = request.LastErrorMessage;
+                        return BadRequest(_lastErrorMessage);
+                    }
+
+                    return Ok(dtoOwtq);
                 }
             }
             catch (Exception excep)

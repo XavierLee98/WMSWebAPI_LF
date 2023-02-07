@@ -7,6 +7,7 @@ using WMSWebAPI.Class;
 using WMSWebAPI.Models.Demo;
 using WMSWebAPI.Models.Demo.Transfer1;
 using WMSWebAPI.Models.GRPO;
+using WMSWebAPI.Models.Lifewater;
 
 namespace WMSWebAPI.SAP_SQL
 {
@@ -44,6 +45,12 @@ namespace WMSWebAPI.SAP_SQL
         {
             using var conn = new SqlConnection(databaseConnStr);
             return conn.Query<NNM1>("SELECT * FROM NNM1 WHERE ObjectCode = '1250000001'").ToArray();
+        }
+
+        public OPLN_Ex[] GetTransferPriceList()
+        {
+            using var conn = new SqlConnection(databaseConnStr);
+            return conn.Query<OPLN_Ex>("SELECT T0.ListNum, T0.ListName, T1.U_Module, T1.U_Value FROM OPLN T0 INNER JOIN [@APPPRICELIST] T1 ON T0.ListName = T1.U_Value WHERE U_Module = 'OWTQ'; ").ToArray();
         }
 
         /// <summary>
@@ -442,13 +449,17 @@ namespace WMSWebAPI.SAP_SQL
                         $",[TransDate] " +
                         $",[DocNumber] " +
                         $",[Remarks]" +
+                        $",[PriceList]" +
+                        $",[JrnlMemo]" +
                         $") VALUES " +
                         $"(@ToWarehouse" +
                         $",@FromWarehouse" +
                         $",@Guid" +
                         $",@TransDate " +
                         $",@DocNumber " +
-                        $",@Remarks)";
+                        $",@Remarks" +
+                        $",@PriceList" +
+                        $",@JrnlMemo)";
 
                     result = conn.Execute(insertHead, head, trans);
                     if (result < 0) { Rollback(); return -1; }

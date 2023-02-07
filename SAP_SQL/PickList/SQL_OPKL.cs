@@ -73,33 +73,33 @@ namespace WMSWebAPI.SAP_SQL.PickList
             }
         }
 
-        public List<OBTQ_Ex> GetOnholdBatches_Released(PKL1_Ex PickItemLine)
-        {
-            var SAPConn = new SqlConnection(sapConnStr);
+        //public List<OBTQ_Ex> GetOnholdBatches_Released(PKL1_Ex PickItemLine)
+        //{
+        //    var SAPConn = new SqlConnection(sapConnStr);
 
-            List<OBTQ_Ex> oBTQs = new List<OBTQ_Ex>();
+        //    List<OBTQ_Ex> oBTQs = new List<OBTQ_Ex>();
 
-            if (PickItemLine == null) throw new Exception("Pick Detail Line not found [Batch]. Please try again");
+        //    if (PickItemLine == null) throw new Exception("Pick Detail Line not found [Batch]. Please try again");
 
 
-            var result = SAPConn.Query<HoldPickItem>("zwa_IMApp_PickList_spGetOnholdBatch",
-                new { PickListDocEntry = PickItemLine.AbsEntry , PickListLineNum = PickItemLine.PickEntry },
-                commandType: CommandType.StoredProcedure, commandTimeout: 0).ToList();
+        //    var result = SAPConn.Query<HoldPickItem>("zwa_IMApp_PickList_spGetOnholdBatch",
+        //        new { PickListDocEntry = PickItemLine.AbsEntry , PickListLineNum = PickItemLine.PickEntry },
+        //        commandType: CommandType.StoredProcedure, commandTimeout: 0).ToList();
 
-            if(result == null) return null;
+        //    if(result == null) return null;
 
-            foreach(var line in result)
-            {
-                oBTQs.Add(new OBTQ_Ex 
-                {
-                    ItemCode = line.ItemCode,
-                    DistNumber = line.Batch,
-                    TransferBatchQty = line.Quantity
-                });
-            }
+        //    foreach(var line in result)
+        //    {
+        //        oBTQs.Add(new OBTQ_Ex 
+        //        {
+        //            ItemCode = line.ItemCode,
+        //            DistNumber = line.Batch,
+        //            TransferBatchQty = line.Quantity
+        //        });
+        //    }
 
-            return oBTQs;
-        }
+        //    return oBTQs;
+        //}
 
         public List<OBTQ_Ex> GetBatchItemAfterPicked(PKL1_Ex PickItemLine)
         {

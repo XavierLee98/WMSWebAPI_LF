@@ -14,5 +14,7 @@ namespace WMSWebAPI.Models.Demo
         public DateTime TransDate { get; set; }
         public string DocNumber { get; set; }
         public string Remarks { get; set; }
+        public string PriceList { get; set; }
+        public string JrnlMemo { get; set; }
     }
 }

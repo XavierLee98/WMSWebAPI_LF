@@ -9,6 +9,7 @@ using WMSWebAPI.Models.Demo;
 using WMSWebAPI.Models.Demo.Transfer1;
 using WMSWebAPI.Models.GRPO;
 using WMSWebAPI.Models.InventoryCount;
+using WMSWebAPI.Models.Lifewater;
 using WMSWebAPI.Models.Lifewater.GRGI;
 using WMSWebAPI.Models.PickList;
 using WMSWebAPI.Models.Request;
@@ -220,6 +221,7 @@ namespace WMSWebAPI.Class
         public zwaHoldRequest[] dtozwaHoldRequests { get; set; } // 20201031T1909
         public zwaTransferDocDetails[] dtozmwTransferDocDetails { get; set; }// 20201101T1111
         public zwaTransferDocDetailsBin[] dtozwaTransferDocDetailsBin { get; set; } // 20201101T1111
+        public OPLN_Ex[] dtoPriceList { get; set; }
         public Guid TransferDocRequestGuid { get; set; }
         public Guid TransferDocRequestGuidLine { get; set; }
         public int[] PoDocEntries { get; set; }

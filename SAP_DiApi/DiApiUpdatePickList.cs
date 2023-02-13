@@ -18,6 +18,8 @@ namespace WMSWebAPI.SAP_DiApi
     public class DiApiUpdatePickList : IDisposable
     {
         public void Dispose() => GC.Collect();
+        readonly string _success = "Success";
+        readonly string _fail = "Fail";
         public string LastErrorMessage { get; private set; }
         string _dbConnectionStr;
         IConfiguration _configuration;
@@ -77,9 +79,11 @@ namespace WMSWebAPI.SAP_DiApi
                 if (RetVal != 0)
                 {
                     LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
+                    InsertPickAlloactedLog(pickLine, batch, "Remove", _fail, LastErrorMessage);
                     return -1;
                 }
-                
+                InsertPickAlloactedLog(pickLine, batch, "Remove", _success, LastErrorMessage);
+
                 if (oDocuments != null) Marshal.ReleaseComObject(oDocuments);
                 oDocuments = null;
 
@@ -88,6 +92,7 @@ namespace WMSWebAPI.SAP_DiApi
             catch (Exception e)
             {
                 LastErrorMessage = $"{e.Message} \n";
+                InsertPickAlloactedLog(pickLine, batch, "Remove", _fail, LastErrorMessage);
                 return -1;
             }
         }
@@ -126,14 +131,20 @@ namespace WMSWebAPI.SAP_DiApi
                 if (RetVal != 0)
                 {
                     LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
+                    InsertPickAlloactedLog(pKL1Line, batch, "Insert", _fail, LastErrorMessage);
+
                     return -1;
                 }
+
+                InsertPickAlloactedLog(pKL1Line, batch, "Insert", _success, LastErrorMessage);
 
                 return RetVal;
             }
             catch (Exception e)
             {
                 LastErrorMessage = $"{e.Message} \n";
+                InsertPickAlloactedLog(pKL1Line, batch, "Insert", _fail, LastErrorMessage);
+
                 return -1;
             }
             finally
@@ -143,55 +154,84 @@ namespace WMSWebAPI.SAP_DiApi
             }
         }
 
+        void InsertPickAlloactedLog(PKL1_Ex pKL1Line, OBTQ_Ex batch, string action, string status, string errmsg)
+        {
+            try
+            {
+                var conn = new SqlConnection(_dbConnectionStr);
+
+                var result = conn.Execute("sp_InsertPickListAllocateItemTransaction",
+                    new
+                    {
+                        SODocEntry = pKL1Line.OrderEntry,
+                        SOLineNum = pKL1Line.OrderLine,
+                        PickListDocEntry = pKL1Line.AbsEntry,
+                        PickListLineNum = pKL1Line.PickEntry,
+                        ItemCode = pKL1Line.ItemCode,
+                        ItemDesc = pKL1Line.Dscription,
+                        Batch = batch.DistNumber,
+                        Quantity = batch.TransferBatchQty,
+                        PickAction = action,
+                        status = status,
+                        Errormsg = errmsg
+                    },
+                    commandType: System.Data.CommandType.StoredProcedure);
+            }
+            catch (Exception excep)
+            {
+                LastErrorMessage = $"{excep.Message} \n";
+            }
+        }
+
         /// <summary>
         /// Update PickList Header
         /// </summary>
         /// <param name="PickHead"></param>
         /// <returns></returns>
-        public int UpdatePickListHeader(OPKL_Ex PickHead)
-        {
+        //public int UpdatePickListHeader(OPKL_Ex PickHead)
+        //{
 
-            try
-            {
-                if (!_company.connectSAP())
-                {
-                    throw new Exception(_company.errMsg);
-                }
+        //    try
+        //    {
+        //        if (!_company.connectSAP())
+        //        {
+        //            throw new Exception(_company.errMsg);
+        //        }
 
-                PickLists oPickLists = null;
-                PickLists_Lines oPickLists_Lines = null;
-                oPickLists = (PickLists)_company.oCom.GetBusinessObject(BoObjectTypes.oPickLists);
-                oPickLists.GetByKey(PickHead.AbsEntry);
-                oPickLists.Name = PickHead.U_Picker;
-                oPickLists.Remarks = PickHead.Remarks;
-                oPickLists.UserFields.Fields.Item("U_Driver").Value = PickHead.U_Driver;
-                oPickLists.UserFields.Fields.Item("U_TruckNo").Value = PickHead.U_TruckNo;
-                oPickLists.UserFields.Fields.Item("U_DeliveryType").Value = PickHead.U_DeliveryType;
-                oPickLists_Lines = oPickLists.Lines;
+        //        PickLists oPickLists = null;
+        //        PickLists_Lines oPickLists_Lines = null;
+        //        oPickLists = (PickLists)_company.oCom.GetBusinessObject(BoObjectTypes.oPickLists);
+        //        oPickLists.GetByKey(PickHead.AbsEntry);
+        //        oPickLists.Name = PickHead.U_Picker;
+        //        oPickLists.Remarks = PickHead.Remarks;
+        //        oPickLists.UserFields.Fields.Item("U_Driver").Value = PickHead.U_Driver;
+        //        oPickLists.UserFields.Fields.Item("U_TruckNo").Value = PickHead.U_TruckNo;
+        //        oPickLists.UserFields.Fields.Item("U_DeliveryType").Value = PickHead.U_DeliveryType;
+        //        oPickLists_Lines = oPickLists.Lines;
 
-                int RetVal = oPickLists.Update();
+        //        int RetVal = oPickLists.Update();
 
-                if (RetVal != 0)
-                {
-                    LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
+        //        if (RetVal != 0)
+        //        {
+        //            LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
 
-                    if (oPickLists != null) Marshal.ReleaseComObject(oPickLists);
-                    oPickLists = null;
+        //            if (oPickLists != null) Marshal.ReleaseComObject(oPickLists);
+        //            oPickLists = null;
 
-                    return -1;
-                }
+        //            return -1;
+        //        }
 
-                if (oPickLists != null) Marshal.ReleaseComObject(oPickLists);
-                oPickLists = null;
+        //        if (oPickLists != null) Marshal.ReleaseComObject(oPickLists);
+        //        oPickLists = null;
 
-                return RetVal;
-            }
-            catch (Exception e)
-            {
-                LastErrorMessage = $"{e.Message} \n";
-                return -1;
-            }
-        }
+        //        return RetVal;
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        LastErrorMessage = $"{e.Message} \n";
+        //        return -1;
+        //    }
+        //}
     }
 }
 

@@ -55,13 +55,13 @@ namespace WMSWebAPI.SAP_SQL.PickList
                     {
                         line.oBTQList = new List<OBTQ_Ex>();
 
-                        if(line.PickStatus == "Y")
-                        {
+                        //if(line.PickStatus == "Y")
+                        //{
                             line.oBTQList = GetBatchItemAfterPicked(line);
                             continue;
-                        }
+                        //}
 
-                        line.oBTQList = GetOnholdBatches_Released(line);
+                        //line.oBTQList = GetOnholdBatches_Released(line);
                     }
                 }
                 return result;
@@ -73,33 +73,33 @@ namespace WMSWebAPI.SAP_SQL.PickList
             }
         }
 
-        public List<OBTQ_Ex> GetOnholdBatches_Released(PKL1_Ex PickItemLine)
-        {
-            var SAPConn = new SqlConnection(sapConnStr);
+        //public List<OBTQ_Ex> GetOnholdBatches_Released(PKL1_Ex PickItemLine)
+        //{
+        //    var SAPConn = new SqlConnection(sapConnStr);
 
-            List<OBTQ_Ex> oBTQs = new List<OBTQ_Ex>();
+        //    List<OBTQ_Ex> oBTQs = new List<OBTQ_Ex>();
 
-            if (PickItemLine == null) throw new Exception("Pick Detail Line not found [Batch]. Please try again");
+        //    if (PickItemLine == null) throw new Exception("Pick Detail Line not found [Batch]. Please try again");
 
 
-            var result = SAPConn.Query<HoldPickItem>("zwa_IMApp_PickList_spGetOnholdBatch",
-                new { PickListDocEntry = PickItemLine.AbsEntry , PickListLineNum = PickItemLine.PickEntry },
-                commandType: CommandType.StoredProcedure, commandTimeout: 0).ToList();
+        //    var result = SAPConn.Query<HoldPickItem>("zwa_IMApp_PickList_spGetOnholdBatch",
+        //        new { PickListDocEntry = PickItemLine.AbsEntry , PickListLineNum = PickItemLine.PickEntry },
+        //        commandType: CommandType.StoredProcedure, commandTimeout: 0).ToList();
 
-            if(result == null) return null;
+        //    if(result == null) return null;
 
-            foreach(var line in result)
-            {
-                oBTQs.Add(new OBTQ_Ex 
-                {
-                    ItemCode = line.ItemCode,
-                    DistNumber = line.Batch,
-                    TransferBatchQty = line.Quantity
-                });
-            }
+        //    foreach(var line in result)
+        //    {
+        //        oBTQs.Add(new OBTQ_Ex 
+        //        {
+        //            ItemCode = line.ItemCode,
+        //            DistNumber = line.Batch,
+        //            TransferBatchQty = line.Quantity
+        //        });
+        //    }
 
-            return oBTQs;
-        }
+        //    return oBTQs;
+        //}
 
         public List<OBTQ_Ex> GetBatchItemAfterPicked(PKL1_Ex PickItemLine)
         {
@@ -111,7 +111,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
 
 
             var result = SAPConn.Query<AllocatedItem>("zwa_IMApp_PickList_spGetAllocatedBatch", 
-                                                       new { DocEntry = PickItemLine.AbsEntry, DocLineNum = PickItemLine.PickEntry }, 
+                                                       new { DocEntry = PickItemLine.OrderEntry, DocLineNum = PickItemLine.OrderLine }, 
                                                        commandType: CommandType.StoredProcedure, 
                                                        commandTimeout:0).ToList();
             foreach (var line in result)
@@ -137,25 +137,25 @@ namespace WMSWebAPI.SAP_SQL.PickList
         /// </summary>
         /// <param name="PickDoc"></param>
         /// <returns></returns>
-        public int RemoveHoldingSingleBatch(PKL1_Ex pickLine, OBTQ_Ex batch)
-        {
-            try
-            {
-                var query = "Delete [dbo].[zmwSOHoldPickItem] WHERE PickListDocEntry = @PickDoc and PickListLineNum = @PickLineNo and Batch = @Batch and ItemCode = @ItemCode";
+        //public int RemoveHoldingSingleBatch(PKL1_Ex pickLine, OBTQ_Ex batch)
+        //{
+        //    try
+        //    {
+        //        var query = "Delete [dbo].[zmwSOHoldPickItem] WHERE PickListDocEntry = @PickDoc and PickListLineNum = @PickLineNo and Batch = @Batch and ItemCode = @ItemCode";
 
-                using (var conn = new SqlConnection(databaseConnStr))
-                {
-                    int result = conn.Execute(query, new { PickDoc = pickLine.AbsEntry, PickLineNo = pickLine.PickEntry, Batch = batch.DistNumber, ItemCode = pickLine.ItemCode });
-                    return result;
-                }
+        //        using (var conn = new SqlConnection(databaseConnStr))
+        //        {
+        //            int result = conn.Execute(query, new { PickDoc = pickLine.AbsEntry, PickLineNo = pickLine.PickEntry, Batch = batch.DistNumber, ItemCode = pickLine.ItemCode });
+        //            return result;
+        //        }
 
-            }
-            catch (Exception excep)
-            {
-                LastErrorMessage = $"{excep}";
-                return -1;
-            }
-        }
+        //    }
+        //    catch (Exception excep)
+        //    {
+        //        LastErrorMessage = $"{excep}";
+        //        return -1;
+        //    }
+        //}
 
         /// <summary>
         /// Get all SO Pick Lists 
@@ -202,6 +202,35 @@ namespace WMSWebAPI.SAP_SQL.PickList
             {
                 LastErrorMessage = $"{excep}";
                 return null;
+            }
+        }
+
+        public int UpdatePickHeader(OPKL_Ex pickhead)
+        {
+            try
+            {
+                var conn = new SqlConnection(sapConnStr);
+
+                var result = conn.Execute("zwa_IMApp_PickList_spUpdatePickHeader",
+                    new { 
+                        AbsEntry = pickhead.AbsEntry,
+                        Picker = pickhead.U_Picker, 
+                        Driver = pickhead.U_Driver, 
+                        TruckNo = pickhead.U_TruckNo, 
+                        DeliveryType = pickhead.U_DeliveryType, 
+                        Remark = pickhead.Remarks
+                    },
+                    commandType:CommandType.StoredProcedure
+                    );
+
+                return 0;
+
+            }
+            catch (Exception excep)
+            {
+                LastErrorMessage = excep.ToString();
+                Console.WriteLine(excep);
+                return -1;
             }
         }
 
@@ -371,61 +400,61 @@ namespace WMSWebAPI.SAP_SQL.PickList
         /// </summary>
         /// <param name="bag"></param>
         /// <returns></returns>
-        public int InsertHoldingBatch(PKL1_Ex pKL1Line, OBTQ_Ex oBTQ)
-        {
-            int result = -1;
-            try
-            {
-                var insertquery =
-                    @"INSERT INTO [dbo].[zmwSOHoldPickItem]
-                      ([SODocEntry] 
-                      ,[SOLineNum] 
-                      ,[PickListDocEntry] 
-                      ,[PickListLineNum]
-                      ,[ItemCode] 
-                      ,[ItemDesc] 
-                      ,[Batch] 
-                      ,[Quantity] 
-                      ,[AllocatedDate] 
-                      ,[PickStatus]) 
-                       VALUES 
-                     ( @SODocEntry,
-                       @SOLineNum,
-                       @PickListDocEntry,
-                       @PickListLineNum, 
-                       @ItemCode,
-                       @ItemDesc,
-                       @Batch, 
-                       @Quantity,
-                       @AllocatedDate,
-                       @PickStatus ); ";
+        //public int InsertHoldingBatch(PKL1_Ex pKL1Line, OBTQ_Ex oBTQ)
+        //{
+        //    int result = -1;
+        //    try
+        //    {
+        //        var insertquery =
+        //            @"INSERT INTO [dbo].[zmwSOHoldPickItem]
+        //              ([SODocEntry] 
+        //              ,[SOLineNum] 
+        //              ,[PickListDocEntry] 
+        //              ,[PickListLineNum]
+        //              ,[ItemCode] 
+        //              ,[ItemDesc] 
+        //              ,[Batch] 
+        //              ,[Quantity] 
+        //              ,[AllocatedDate] 
+        //              ,[PickStatus]) 
+        //               VALUES 
+        //             ( @SODocEntry,
+        //               @SOLineNum,
+        //               @PickListDocEntry,
+        //               @PickListLineNum, 
+        //               @ItemCode,
+        //               @ItemDesc,
+        //               @Batch, 
+        //               @Quantity,
+        //               @AllocatedDate,
+        //               @PickStatus ); ";
 
-                using (var conn = new SqlConnection(databaseConnStr))
-                {
-                    result = conn.Execute(insertquery,
-                              new
-                              {
-                                  SODocEntry = pKL1Line.OrderEntry,
-                                  SOLineNum = pKL1Line.OrderLine,
-                                  PickListDocEntry = pKL1Line.AbsEntry,
-                                  PickListLineNum = pKL1Line.PickEntry,
-                                  ItemCode = pKL1Line.ItemCode,
-                                  ItemDesc = pKL1Line.Dscription,
-                                  Batch = oBTQ.DistNumber,
-                                  Quantity = oBTQ.TransferBatchQty,
-                                  AllocatedDate = DateTime.Now,
-                                  PickStatus = "OnHold"
-                              });
-                }
-                return result;
+        //        using (var conn = new SqlConnection(databaseConnStr))
+        //        {
+        //            result = conn.Execute(insertquery,
+        //                      new
+        //                      {
+        //                          SODocEntry = pKL1Line.OrderEntry,
+        //                          SOLineNum = pKL1Line.OrderLine,
+        //                          PickListDocEntry = pKL1Line.AbsEntry,
+        //                          PickListLineNum = pKL1Line.PickEntry,
+        //                          ItemCode = pKL1Line.ItemCode,
+        //                          ItemDesc = pKL1Line.Dscription,
+        //                          Batch = oBTQ.DistNumber,
+        //                          Quantity = oBTQ.TransferBatchQty,
+        //                          AllocatedDate = DateTime.Now,
+        //                          PickStatus = "OnHold"
+        //                      });
+        //        }
+        //        return result;
 
-            }
-            catch (Exception excep)
-            {
-                LastErrorMessage = $"{excep}";
-                return result;
-            }
-        }
+        //    }
+        //    catch (Exception excep)
+        //    {
+        //        LastErrorMessage = $"{excep}";
+        //        return result;
+        //    }
+        //}
 
         /// <summary>
         ///Reset Picker
@@ -636,6 +665,56 @@ namespace WMSWebAPI.SAP_SQL.PickList
             {
                 LastErrorMessage = $"{excep}";
                 return null;
+            }
+        }
+
+        public int ResetPickList_Midware(zwaRequest dtoRequest)
+        {
+            try
+            {
+                if (dtoRequest == null) return -1;
+                SQLconn = new SqlConnection(sapConnStr);
+
+                #region insert request
+                string insertSql = $"INSERT INTO zmwRequest  (" +
+                                             $"request" +
+                                             $",sapUser " +
+                                             $",sapPassword" +
+                                             $",requestTime" +
+                                             $",phoneRegID" +
+                                             $",status" +
+                                             $",guid" +
+                                             $",sapDocNumber" +
+                                             $",completedTime" +
+                                             $",attachFileCnt" +
+                                             $",tried" +
+                                             $",createSAPUserSysId " +
+                                             $")VALUES(" +
+                                             $"@request" +
+                                             $",@sapUser" +
+                                             $",@sapPassword" +
+                                             $",GETDATE()" +
+                                             $",@phoneRegID" +
+                                             $",@status" +
+                                             $",@guid" +
+                                             $",@sapDocNumber" +
+                                             $",GETDATE()" +
+                                             $",@attachFileCnt" +
+                                             $",@tried" +
+                                             $",@createSAPUserSysId)";
+
+                var result = SQLconn.Execute(insertSql, dtoRequest, SQLtrans);
+                if (result < 0)
+                { SQLtrans?.Rollback(); return -1; }
+                #endregion
+
+                return result;
+            }
+
+            catch (Exception excep)
+            {
+                LastErrorMessage = $"{excep}";
+                return -1;
             }
         }
 

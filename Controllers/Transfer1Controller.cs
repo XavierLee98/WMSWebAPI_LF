@@ -255,6 +255,7 @@ namespace WMSWebAPI.Controllers
                 using var transfer1 = new SQL_QueryCode(_dbConnectionStr,_dbMidwareConnectionStr, _midwareDbName);
                 bag.dtozmwTransferDocDetails = transfer1.GetPickedRequestLines(bag.TransferDocRequestGuid); 
                 bag.dtozwaTransferDocDetailsBin = transfer1.GetPickedRequestLinesBins(bag.TransferDocRequestGuid);
+                bag.dtoPriceList = transfer1.GetTransferPriceList();
 
                 if (string.IsNullOrWhiteSpace(transfer1.LastErrorMessage))
                 {

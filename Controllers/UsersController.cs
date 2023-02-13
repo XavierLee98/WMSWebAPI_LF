@@ -10,12 +10,14 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+using WMSWebAPI.Class;
 using WMSWebAPI.Dtos;
 using WMSWebAPI.Interface;
 using WMSWebAPI.Models;
 using WMSWebAPI.Models.Authentcation;
 using WMSWebAPI.Models.SAP_DiApi;
 using WMSWebAPI.SAP_DiApi;
+using WMSWebAPI.SAP_SQL;
 
 namespace WMSWebAPI.Controllers
 {
@@ -55,6 +57,22 @@ namespace WMSWebAPI.Controllers
         }
 
         [AllowAnonymous]
+        [HttpGet("GetAppInfo")]
+        public IActionResult GetAppInfo()
+        {
+            try
+            {
+                var versioncontrol = new SQL_VersionControl(_dbConnString);
+
+                return Ok(versioncontrol.GetAppInfo());
+            }
+            catch (Exception excep)
+            {
+                return BadRequest(excep.Message);
+            }
+        }
+
+        [AllowAnonymous]
         [HttpPost("token")]        
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -72,9 +90,16 @@ namespace WMSWebAPI.Controllers
                 var secKey = _configuration.GetSection("AppSettings").GetSection("Secret").Value;
                 var decrytKey = _configuration.GetSection("AppSettings").GetSection("DecrytKey").Value;
 
+                var versioncontrol = new SQL_VersionControl(_dbConnString);
+
+                if (!versioncontrol.CheckAppVersion(zwaUser.AppName, zwaUser.AppVersion, out string AppUrl))
+                {
+                    return new ObjectResult(AppUrl) { StatusCode = 403};
+                }
+
                 if (!user.VerifiedLogin(secKey, decrytKey))
                 {
-                    return BadRequest("Invalid login");
+                    return Unauthorized("Invalid login");
                 }
 
                     // authentication successful so generate jwt token

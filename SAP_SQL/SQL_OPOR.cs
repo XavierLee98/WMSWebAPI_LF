@@ -138,6 +138,12 @@ namespace WMSWebAPI.SAP_SQL
                 return null;
             }
         }
+
+        public OOCR[] GetOOCRs()
+        {
+            using var conn = new SqlConnection(databaseConnStr);
+            return conn.Query<OOCR>("SELECT * FROM FTS_vw_IMApp_GetMachineDimensions").ToArray();
+        }
         /// <summary>
         /// Get list of GRPO doc series
         /// </summary>

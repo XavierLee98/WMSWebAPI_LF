@@ -25,5 +25,6 @@ namespace WMSWebAPI.Models.Request
         public string AcctCode { get; set; } // GR / BI acct code
         public string AcctName { get; set; }
         public decimal LineWeight { get; set; }
+        public string Machine { get; set; }
     }
 }

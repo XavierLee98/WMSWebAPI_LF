@@ -67,8 +67,32 @@ namespace WMSWebAPI.Controllers
                         {
                             return GetGRPODocSeries(bag);
                         }
+                    case "GetMachineList":
+                        {
+                            return GetMachineList(bag);
+                        }
                 }
                 return BadRequest($"Invalid request, please try again later. Thanks");
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", bag);
+                return BadRequest($"{excep}");
+            }
+        }
+
+        IActionResult GetMachineList(Cio bag)
+        {
+            try
+            {
+                var _dbConnectionStr = _configuration.GetConnectionString(_dbName);
+                using var po = new SQL_OPOR(_dbConnectionStr);
+                var list = po.GetOOCRs();
+                if (!string.IsNullOrWhiteSpace(po.LastErrorMessage))
+                {
+                    return BadRequest(po.LastErrorMessage);
+                }
+                return Ok(list);
             }
             catch (Exception excep)
             {

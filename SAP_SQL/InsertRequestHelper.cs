@@ -331,6 +331,7 @@ namespace WMSWebAPI.SAP_SQL
                                              $",Warehouse" +
                                              $",SourceDocType" +
                                              $",LineGuid" +
+                                             $",Machine" +
                                              $",Remarks" + // <--- for addin line remark
                                              $",ReasonCode" +     // <--- for reason code
                                              $",ReasonName" + // <--- for reason name
@@ -349,6 +350,7 @@ namespace WMSWebAPI.SAP_SQL
                                              $",@Warehouse" +
                                              $",@SourceDocType" +
                                              $",@LineGuid" +
+                                             $",@Machine" +
                                              $",@Remarks" + // <--- for addin line remark
                                              $",@ReasonCode" +     // <--- for reason code
                                              $",@ReasonName" + // <--- for reason name

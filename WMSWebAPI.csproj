@@ -18,7 +18,7 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'">
-    <PlatformTarget>x86</PlatformTarget>
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <Prefer32Bit>true</Prefer32Bit>
     <Optimize>false</Optimize>
   </PropertyGroup>
@@ -61,8 +61,8 @@
     <Reference Include="DbClass">
       <HintPath>DbClass.dll</HintPath>
     </Reference>
-    <Reference Include="Interop.SAPbobsCOM">
-      <HintPath>..\..\WMSWebAPI_LFversion20220207\Interop.SAPbobsCOM.dll</HintPath>
+    <Reference Include="SAPBusinessOneSDK">
+      <HintPath>D:\SAPBusinessOneSDK.dll</HintPath>
     </Reference>
   </ItemGroup>
 

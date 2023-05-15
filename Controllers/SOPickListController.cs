@@ -65,23 +65,28 @@ namespace WMSWebAPI.Controllers
                         }
                     case "GetBatchItem":
                         {
-                            return GetBatchItem(bag);
+                            return GetAvailableBatchItem(bag);
                         }
-                    case "AssignBatchToSO":
+                    case "AddBatch":
                         {
-                            return AssignBatchToSO(bag);
+                            return AddBatch(bag);
                         }
-                    case "UpdatePickList":
+                    case "RemoveBatch":
                         {
-                            return UpdatePickList(bag);
+                            return RemoveBatch(bag);
+                        }
+                    //case "UpdatePickList":
+                    //    {
+                    //        //return UpdatePickList(bag);
+                    //    }
+
+                    case "PostPickList":
+                        {
+                            return PostPickList(bag);
                         }
                     case "HandleUpdatePickListHeader":
                         {
                             return HandleUpdatePickListHeader(bag);
-                        }
-                    case "RemoveSingleBatchAllocation":
-                        {
-                            return RemoveSingleBatchAllocation(bag);
                         }
                     case "UpdateValidateItemConfiguration":
                         {
@@ -117,64 +122,65 @@ namespace WMSWebAPI.Controllers
             }
         }
 
+        private IActionResult AddBatch(Cio bag)
+        {
+            try
+            {
+                using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
+                int result = -1;
 
-        /// <summary>
-        /// Cancel Allocation for single Batch Item (SO)
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
-        //private IActionResult RemoveAllBatchesForSingleItem(Cio bag)
-        //{
-        //    try
-        //    {
-        //        var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
-        //        using var list = new DiApiUpdatePickList(_configuration,_dbMidwareConnectionStr,_company);
-        //        using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
+                result = sqllist.AddBatch(bag.PickItemLine, bag.oBTQ);
+                _lastErrorMessage = sqllist.LastErrorMessage;
+                if (result < 0)
+                {
+                    return BadRequest(_lastErrorMessage);
+                }
+                return Ok();
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", bag);
+                return BadRequest($"{excep}");
+            }
+        }
 
-        //        int result = list.SORemoveAllBatchesForSingleItem(bag.PickItemLine);
-        //        _lastErrorMessage = list.LastErrorMessage;
-        //        if (result < 0)
-        //        {
-        //            return BadRequest(_lastErrorMessage);
-        //        }
-        //        result = sqllist.DeleteBatchVarianceForSingleItem(bag.PickItemLine, bag.oBTQs);
-        //        _lastErrorMessage = sqllist.LastErrorMessage;
-        //        if (result < 0)
-        //        {
-        //            return BadRequest(_lastErrorMessage);
-        //        }
-        //        result = sqllist.RemoveMultiBatch(bag.PickItemLine, bag.oBTQs);
-        //        _lastErrorMessage = sqllist.LastErrorMessage;
-        //        if (result < 0)
-        //        {
-        //            return BadRequest(_lastErrorMessage);
-        //        }
-        //        return Ok();
-        //    }
-        //    catch (Exception excep)
-        //    {
-        //        Log($"{excep}", bag);
-        //        return BadRequest($"{excep}");
-        //    }
-        //}
+        private IActionResult RemoveBatch(Cio bag)
+        {
+            try
+            {
+                using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
+                int result = -1;
 
-        /// <summary>
-        /// Update Pick List Header
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
+                result = sqllist.RemoveBatch(bag.PickItemLine, bag.oBTQ);
+                _lastErrorMessage = sqllist.LastErrorMessage;
+                if (result < 0)
+                {
+                    return BadRequest(_lastErrorMessage);
+                }
+
+                result = sqllist.DeleteBatchVariance(bag.PickItemLine, bag.oBTQ);
+                _lastErrorMessage = sqllist.LastErrorMessage;
+                if (result < 0)
+                {
+                    return BadRequest(_lastErrorMessage);
+                }
+
+                return Ok();
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", bag);
+                return BadRequest($"{excep}");
+            }
+        }
+
         private IActionResult HandleUpdatePickListHeader(Cio bag)
         {
             try
             {
                 using var list = new SQL_OPKL(_dbMidwareConnectionStr,_sapConnectionStr);
 
-                //using var list = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
-
-                //int result = list.UpdatePickListHeader( bag.PickHead);//zwa_IMApp_PickList_spUpdatePickHeader
-                //_lastErrorMessage = list.LastErrorMessage;
-
-                int result = list.UpdatePickHeader(bag.PickHead);//zwa_IMApp_PickList_spUpdatePickHeader
+                int result = list.UpdatePickHeader(bag.PickHead);
                 _lastErrorMessage = list.LastErrorMessage;
 
                 if (result < 0)
@@ -190,129 +196,13 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        /// Remove Allocation Batch Item (SO)
-        //private IActionResult HandleRemoveSOBatchAllocation(Cio bag)
-        //{
-        //    try
-        //    {
-        //        var _sapConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
-        //        using var list = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
-        //        using var midwarelist = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr);
-
-        //        int result = list.RemoveBatchAllocationSOPickList(bag.pKL1List);
-        //        _lastErrorMessage = list.LastErrorMessage;
-        //        if (result < 0)
-        //        {
-        //            return BadRequest(_lastErrorMessage);
-        //        }
-        //        result = midwarelist.DeleteBatchVarianceForAllItem(bag.pKL1List);
-        //        _lastErrorMessage = midwarelist.LastErrorMessage;
-        //        if (result < 0)
-        //        {
-        //            return BadRequest(_lastErrorMessage);
-        //        }
-        //        result = midwarelist.RemoveAllBatchesforPickList(bag.pKL1List);
-        //        _lastErrorMessage = midwarelist.LastErrorMessage;
-        //        if (result < 0)
-        //        {
-        //            return BadRequest(_lastErrorMessage);
-        //        }
-
-        //        return Ok();
-        //    }
-        //    catch (Exception excep)
-        //    {
-        //        Log($"{excep}", bag);
-        //        return BadRequest($"{excep}");
-        //    }
-        //}
-
-        /// <summary>
-        /// Cancel Allocation for single Batch Item (SO)
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
-        private IActionResult RemoveSingleBatchAllocation (Cio bag)
-        {
-            try
-            {
-                using var list = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
-                using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
-
-                int result = list.SOCancelAssignSingleBatch(bag.PickItemLine, bag.oBTQ);
-                _lastErrorMessage = list.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-                result = sqllist.DeleteBatchVariance(bag.PickItemLine, bag.oBTQ);
-                _lastErrorMessage = list.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-                //result = sqllist.RemoveHoldingSingleBatch(bag.PickItemLine, bag.oBTQ);
-                //_lastErrorMessage = sqllist.LastErrorMessage;
-                //if (result < 0)
-                //{
-                //    return BadRequest(_lastErrorMessage);
-                //}
-                return Ok();
-            }
-            catch (Exception excep)
-            {
-                Log($"{excep}", bag);
-                return BadRequest($"{excep}");
-            }
-        }
-
-        /// <summary>
-        /// Allocate Batch Item (SO)
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
-        private IActionResult AssignBatchToSO(Cio bag)
-        {
-            try
-            {
-                using var diapilist = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr, _company);
-                using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
-                int result = -1;
-
-                result = diapilist.AssignBatchToSo(bag.PickItemLine, bag.oBTQ);
-                _lastErrorMessage = diapilist.LastErrorMessage;
-                if (result < 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-
-                //result = sqllist.InsertHoldingBatch(bag.PickItemLine, bag.oBTQ);
-                //_lastErrorMessage = sqllist.LastErrorMessage;
-                //if (result < 0)
-                //{
-                //    return BadRequest(_lastErrorMessage);
-                //}
-
-                return Ok();
-            }
-            catch (Exception excep)
-            {
-                Log($"{excep}", bag);
-                return BadRequest($"{excep}");
-            }
-        }
-
-        /// <summary>
-        /// Get Available Batch Item
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
-        private IActionResult GetBatchItem(Cio bag)
+        private IActionResult GetAvailableBatchItem(Cio bag)
         {
             try
             {
                 using var list = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr);
-                var batches = list.GetAvailableBatches(bag.ItemCodeInput,bag.QueryWhs);
+                var line = bag.PickItemLine;
+                var batches = list.GetAvailableBatches(line.ItemCode, line.WhsCode, line.AbsEntry, line.PickEntry);
                 _lastErrorMessage = list.LastErrorMessage;
 
                 if (_lastErrorMessage.Length > 0)
@@ -328,11 +218,6 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Get Pick Lines
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
         private IActionResult GetPickDetails(Cio bag)
         {
             try
@@ -347,6 +232,13 @@ namespace WMSWebAPI.Controllers
                 {
                     return BadRequest(_lastErrorMessage);
                 }
+
+                //dto.draftList = list.GetLineDrafts(bag.PickHead.AbsEntry);
+                //_lastErrorMessage = list.LastErrorMessage;
+                //if (_lastErrorMessage.Length > 0)
+                //{
+                //    return BadRequest(_lastErrorMessage);
+                //}
 
                 dto.IsEnableItemValidate = list.GetValidateItemConfiguration();
                 _lastErrorMessage = list.LastErrorMessage;
@@ -375,11 +267,6 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Get All SO PickList
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
         private IActionResult GetPickList(Cio bag)
         {
             try
@@ -399,6 +286,7 @@ namespace WMSWebAPI.Controllers
                 return BadRequest($"{excep}");
             }
         }
+
         private IActionResult GetAllPickListAndWarehouse(Cio bag)
         {
             try
@@ -430,11 +318,6 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Update Picker
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
         private IActionResult UpdatePicker(Cio bag)
         {
             try
@@ -457,33 +340,6 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        //private IActionResult GetItemdetails(Cio bag)
-        //{
-        //    try
-        //    {
-        //        var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
-        //        using var list = new SQL_OPKL(_sapConnectionStr);
-        //        var dtoPKL = new DTO_OPKL();
-        //        bag.ItemDetails = list.GetItemdetails(bag);
-        //        _lastErrorMessage = list.LastErrorMessage;
-        //        if (!String.IsNullOrWhiteSpace(_lastErrorMessage))
-        //        {
-        //            return BadRequest(_lastErrorMessage);
-        //        }
-        //        return Ok(bag);
-        //    }
-        //    catch (Exception excep)
-        //    {
-        //        Log($"{excep}", bag);
-        //        return BadRequest($"{excep}");
-        //    }
-        //}
-
-        /// <summary>
-        /// Insert Batch Variance
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
         private IActionResult InsertBatchVariance(Cio bag)
         {
             try
@@ -505,11 +361,7 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// ResetPicker
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
+
         private IActionResult ResetPicker(Cio bag)
         {
             try
@@ -532,11 +384,7 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Update configuration Item Validation for Pick List
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
+
         private IActionResult UpdateValidateItemConfiguration(Cio bag)
         {
             try
@@ -557,11 +405,7 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        /// <summary>
-        /// Get configuration Item Validation for Pick List
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
+
         private IActionResult GetConfigureItemValidation(Cio bag)
         {
             try
@@ -610,11 +454,20 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        /// Update picklist
-        /// </summary>
-        /// <param name="bag"></param>
-        /// <returns></returns>
-        IActionResult UpdatePickList(Cio bag)
+        //IActionResult UpdatePickList(Cio bag)
+        //{
+        //    try
+        //    {
+
+        //    }
+        //    catch (Exception excep)
+        //    {
+        //        Log($"{excep}", bag);
+        //        return BadRequest($"{excep}");
+        //    }
+        //}
+
+        IActionResult PostPickList(Cio bag)
         {
             try
             {
@@ -649,107 +502,3 @@ namespace WMSWebAPI.Controllers
 }
 
 
-#region OldCode
-//                    case "GetPickDetailsFromSOWithOnhold":
-//                        {
-//    return GetPickDetailsFromSOWithOnhold(bag);//Get pick details (SO)
-//}
-//                    case "GetPickDetailsFromSOWithBatch":
-//                        {
-//    return GetPickDetailsFromSOWithBatch(bag);//Get pick details (SO)
-
-//    /// <summary>
-//    /// Get PickList Details (SO)
-//    /// </summary>
-//    /// <param name="bag"></param>
-//    /// <returns></returns>
-//    private IActionResult GetPickDetailsFromSOWithOnhold(Cio bag)
-//    {
-//        try
-//        {
-//            var _sapConnectionStr = _configuration.GetConnectionString(_dbName);
-//            using var list = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr);
-//            var dtoPKL = new DTO_OPKL();
-//            dtoPKL = list.GetPickDetailsFromSOWithOnholdBatch(bag.PickDoc);
-//            _lastErrorMessage = list.LastErrorMessage;
-//            if (_lastErrorMessage.Length > 0)
-//            {
-//                return BadRequest(_lastErrorMessage);
-//            }
-//            return Ok(dtoPKL);
-//        }
-//        catch (Exception excep)
-//        {
-//            Log($"{excep}", bag);
-//            return BadRequest($"{excep}");
-//        }
-//    }
-//}
-
-///// <summary>
-///// Get Pick Item Line With Batch
-///// </summary>
-///// <param name="bag"></param>
-///// <returns></returns>
-//private IActionResult GetPickDetailsFromSOWithBatch(Cio bag)
-//{
-//    try
-//    {
-//        using var list = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr);
-//        var dtoPKL = new DTO_OPKL();
-//        dtoPKL = list.GetPickDetailsFromSOWithBatch(bag.PickDoc);
-//        _lastErrorMessage = list.LastErrorMessage;
-//        if (_lastErrorMessage.Length > 0)
-//        {
-//            return BadRequest(_lastErrorMessage);
-//        }
-//        return Ok(dtoPKL);
-//    }
-//    catch (Exception excep)
-//    {
-//        Log($"{excep}", bag);
-//        return BadRequest($"{excep}");
-//    }
-//}
-
-//case "HandleUpdatePickList":
-//    {
-//        return HandleUpdatePickList(bag);
-//    }
-///// <summary>
-///// Update Picked in Pick List
-///// </summary>
-///// <param name="bag"></param>
-///// <returns></returns>
-//private IActionResult HandleUpdatePickList(Cio bag)
-//{
-//    try
-//    {
-//        var _sapConnectionStr = _configuration.GetConnectionString(_dbNameMidware);
-//        using var diapilist = new DiApiUpdatePickList(_configuration, _dbMidwareConnectionStr,_company);
-//        using var midwarelist = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr);
-
-//        var result = diapilist.PartialUpdatePickList(bag.PickDoc, bag.pKL1List,bag.PickHead);
-//        _lastErrorMessage = diapilist.LastErrorMessage;
-
-//        if (result < 0)
-//        {
-//            return BadRequest(_lastErrorMessage);
-//        }
-//        result = midwarelist.RemoveAllBatchesforPickList(bag.pKL1List);
-//        _lastErrorMessage = midwarelist.LastErrorMessage;
-//        if (result < 0)
-//        {
-//            return BadRequest(_lastErrorMessage);
-//        }
-
-//        return Ok();
-//    }
-//    catch (Exception excep)
-//    {
-//        Log($"{excep}", bag);
-//        return BadRequest($"{excep}");
-//    }
-//}
-
-#endregion

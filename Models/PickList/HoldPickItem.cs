@@ -16,7 +16,9 @@ namespace WMSWebAPI.Models.PickList
         public string ItemDesc { get; set; }
         public string Batch { get; set; }
         public decimal Quantity { get; set; }
+        public decimal SAPPickedQty { get; set; }
         public DateTime AllocatedDate { get; set; }
-        public string PickStatus { get; set; }
+        public string LineStatus { get; set; }
+        public bool IsCancelled { get; set; }
     }
 }

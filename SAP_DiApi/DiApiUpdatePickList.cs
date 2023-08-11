@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -22,12 +23,10 @@ namespace WMSWebAPI.SAP_DiApi
         readonly string _fail = "Fail";
         public string LastErrorMessage { get; private set; }
         string _dbConnectionStr;
-        IConfiguration _configuration;
         SAPCompany _company;
 
-        public DiApiUpdatePickList(IConfiguration configuration, string dbConnectionStr, SAPCompany company)
+        public DiApiUpdatePickList( string dbConnectionStr, SAPCompany company)
         {
-            _configuration = configuration;
             _dbConnectionStr = dbConnectionStr;
             _company = company;
         }
@@ -45,6 +44,7 @@ namespace WMSWebAPI.SAP_DiApi
                     throw new Exception(_company.errMsg);
 
                 SAPbobsCOM.Documents oDocuments = null;
+                bool isfound = false;
 
                 oDocuments = (SAPbobsCOM.Documents)_company.oCom.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
 
@@ -53,25 +53,31 @@ namespace WMSWebAPI.SAP_DiApi
                 {
                     oDocuments.Lines.SetCurrentLine(x);
                     if (oDocuments.Lines.DocEntry == pickLine.OrderEntry && oDocuments.Lines.LineNum == pickLine.OrderLine)
+                    {
+                        isfound = true;
                         break;
+                    }
                 }
 
-                if (!string.IsNullOrEmpty(oDocuments.Lines.BatchNumbers.BatchNumber))
+                if (isfound)
                 {
-                    for (int v = 0; v < oDocuments.Lines.BatchNumbers.Count; v++)
+                    if (!string.IsNullOrEmpty(oDocuments.Lines.BatchNumbers.BatchNumber))
                     {
-                        oDocuments.Lines.BatchNumbers.SetCurrentLine(v);
-
-                        if (oDocuments.Lines.BatchNumbers.BatchNumber == batch.DistNumber)
+                        for (int v = 0; v < oDocuments.Lines.BatchNumbers.Count; v++)
                         {
-                            if(oDocuments.Lines.BatchNumbers.Quantity <= double.Parse(batch.TransferBatchQty.ToString()))
-                            {
-                                oDocuments.Lines.BatchNumbers.Quantity = 0;
-                                continue;
-                            }
+                            oDocuments.Lines.BatchNumbers.SetCurrentLine(v);
 
-                            oDocuments.Lines.BatchNumbers.Quantity -= double.Parse(batch.TransferBatchQty.ToString());
-                        } 
+                            if (oDocuments.Lines.BatchNumbers.BatchNumber == batch.DistNumber)
+                            {
+                                if (oDocuments.Lines.BatchNumbers.Quantity <= double.Parse(batch.DraftQty.ToString()))
+                                {
+                                    oDocuments.Lines.BatchNumbers.Quantity = 0;
+                                    continue;
+                                }
+
+                                oDocuments.Lines.BatchNumbers.Quantity -= double.Parse(batch.DraftQty.ToString());
+                            }
+                        }
                     }
                 }
 
@@ -79,10 +85,10 @@ namespace WMSWebAPI.SAP_DiApi
                 if (RetVal != 0)
                 {
                     LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
-                    InsertPickAlloactedLog(pickLine, batch, "Remove", _fail, LastErrorMessage);
                     return -1;
                 }
-                InsertPickAlloactedLog(pickLine, batch, "Remove", _success, LastErrorMessage);
+
+                RemoveBatch(pickLine, batch);
 
                 if (oDocuments != null) Marshal.ReleaseComObject(oDocuments);
                 oDocuments = null;
@@ -92,7 +98,6 @@ namespace WMSWebAPI.SAP_DiApi
             catch (Exception e)
             {
                 LastErrorMessage = $"{e.Message} \n";
-                InsertPickAlloactedLog(pickLine, batch, "Remove", _fail, LastErrorMessage);
                 return -1;
             }
         }
@@ -112,6 +117,8 @@ namespace WMSWebAPI.SAP_DiApi
                 if (!_company.connectSAP())
                     throw new Exception(_company.errMsg);
 
+                bool isfound = false;
+
                 oDocuments = (SAPbobsCOM.Documents)_company.oCom.GetBusinessObject(SAPbobsCOM.BoObjectTypes.oOrders);
 
                 oDocuments.GetByKey(pKL1Line.OrderEntry);
@@ -119,32 +126,35 @@ namespace WMSWebAPI.SAP_DiApi
                 {
                     oDocuments.Lines.SetCurrentLine(x);
                     if (oDocuments.Lines.DocEntry == pKL1Line.OrderEntry && oDocuments.Lines.LineNum == pKL1Line.OrderLine)
+                    {
+                        isfound = true;
                         break;
+                    }
                 }
 
-                if(!string.IsNullOrEmpty(oDocuments.Lines.BatchNumbers.BatchNumber)) oDocuments.Lines.BatchNumbers.Add();
-                oDocuments.Lines.BatchNumbers.BatchNumber = batch.DistNumber;
-                oDocuments.Lines.BatchNumbers.Quantity += (double)batch.TransferBatchQty;
+                if (isfound)
+                {
+                    if (!string.IsNullOrEmpty(oDocuments.Lines.BatchNumbers.BatchNumber)) oDocuments.Lines.BatchNumbers.Add();
+                    oDocuments.Lines.BatchNumbers.BatchNumber = batch.DistNumber;
+                    oDocuments.Lines.BatchNumbers.Quantity += (double)batch.TransferBatchQty;
+                }
 
                 int RetVal = oDocuments.Update();
 
                 if (RetVal != 0)
                 {
                     LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
-                    InsertPickAlloactedLog(pKL1Line, batch, "Insert", _fail, LastErrorMessage);
 
                     return -1;
                 }
 
-                InsertPickAlloactedLog(pKL1Line, batch, "Insert", _success, LastErrorMessage);
+                AddBatch(pKL1Line, batch);
 
                 return RetVal;
             }
             catch (Exception e)
             {
                 LastErrorMessage = $"{e.Message} \n";
-                InsertPickAlloactedLog(pKL1Line, batch, "Insert", _fail, LastErrorMessage);
-
                 return -1;
             }
             finally
@@ -154,206 +164,95 @@ namespace WMSWebAPI.SAP_DiApi
             }
         }
 
-        void InsertPickAlloactedLog(PKL1_Ex pKL1Line, OBTQ_Ex batch, string action, string status, string errmsg)
+        int AddBatch(PKL1_Ex pickLine, OBTQ_Ex batch)
         {
             try
             {
-                var conn = new SqlConnection(_dbConnectionStr);
+                using (var conn = new SqlConnection(_dbConnectionStr))
+                {
+                    int result = conn.Execute("sp_InsertPickListAllocateItem",
+                        new
+                        {
+                            SODocEntry = pickLine.OrderEntry,
+                            SOLineNum = pickLine.OrderLine,
+                            PickListDocEntry = pickLine.AbsEntry,
+                            PickListLineNum = pickLine.PickEntry,
+                            ItemCode = pickLine.ItemCode,
+                            ItemDesc = pickLine.Dscription,
+                            Batch = batch.DistNumber,
+                            WhsCode = batch.WhsCode,
+                            Quantity = batch.TransferBatchQty,
+                        }, commandType: CommandType.StoredProcedure);
 
-                var result = conn.Execute("sp_InsertPickListAllocateItemTransaction",
-                    new
-                    {
-                        SODocEntry = pKL1Line.OrderEntry,
-                        SOLineNum = pKL1Line.OrderLine,
-                        PickListDocEntry = pKL1Line.AbsEntry,
-                        PickListLineNum = pKL1Line.PickEntry,
-                        ItemCode = pKL1Line.ItemCode,
-                        ItemDesc = pKL1Line.Dscription,
-                        Batch = batch.DistNumber,
-                        Quantity = batch.TransferBatchQty,
-                        PickAction = action,
-                        status = status,
-                        Errormsg = errmsg
-                    },
-                    commandType: System.Data.CommandType.StoredProcedure);
+                    return result;
+                }
             }
             catch (Exception excep)
             {
-                LastErrorMessage = $"{excep.Message} \n";
+                LastErrorMessage = $"{excep}";
+                return -1;
             }
         }
 
-        /// <summary>
-        /// Update PickList Header
-        /// </summary>
-        /// <param name="PickHead"></param>
-        /// <returns></returns>
-        //public int UpdatePickListHeader(OPKL_Ex PickHead)
-        //{
+        int RemoveBatch(PKL1_Ex pickLine, OBTQ_Ex batch)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(_dbConnectionStr))
+                {
+                    int result = conn.Execute("sp_InsertPickListAllocateItem",
+                        new
+                        {
+                            SODocEntry = pickLine.OrderEntry,
+                            SOLineNum = pickLine.OrderLine,
+                            PickListDocEntry = pickLine.AbsEntry,
+                            PickListLineNum = pickLine.PickEntry,
+                            ItemCode = pickLine.ItemCode,
+                            ItemDesc = pickLine.Dscription,
+                            Batch = batch.DistNumber,
+                            WhsCode = pickLine.WhsCode,
+                            Quantity = -batch.DraftQty,
+                        }, commandType: CommandType.StoredProcedure);
 
+                    return result;
+                }
+            }
+            catch (Exception excep)
+            {
+                LastErrorMessage = $"{excep}";
+                return -1;
+            }
+        }
+
+        //void InsertPickAlloactedLog(PKL1_Ex pKL1Line, OBTQ_Ex batch, string action, string status, string errmsg)
+        //{
         //    try
         //    {
-        //        if (!_company.connectSAP())
-        //        {
-        //            throw new Exception(_company.errMsg);
-        //        }
+        //        var conn = new SqlConnection(_dbConnectionStr);
 
-        //        PickLists oPickLists = null;
-        //        PickLists_Lines oPickLists_Lines = null;
-        //        oPickLists = (PickLists)_company.oCom.GetBusinessObject(BoObjectTypes.oPickLists);
-        //        oPickLists.GetByKey(PickHead.AbsEntry);
-        //        oPickLists.Name = PickHead.U_Picker;
-        //        oPickLists.Remarks = PickHead.Remarks;
-        //        oPickLists.UserFields.Fields.Item("U_Driver").Value = PickHead.U_Driver;
-        //        oPickLists.UserFields.Fields.Item("U_TruckNo").Value = PickHead.U_TruckNo;
-        //        oPickLists.UserFields.Fields.Item("U_DeliveryType").Value = PickHead.U_DeliveryType;
-        //        oPickLists_Lines = oPickLists.Lines;
-
-        //        int RetVal = oPickLists.Update();
-
-        //        if (RetVal != 0)
-        //        {
-        //            LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
-
-        //            if (oPickLists != null) Marshal.ReleaseComObject(oPickLists);
-        //            oPickLists = null;
-
-        //            return -1;
-        //        }
-
-        //        if (oPickLists != null) Marshal.ReleaseComObject(oPickLists);
-        //        oPickLists = null;
-
-        //        return RetVal;
+        //        var result = conn.Execute("sp_InsertPickListAllocateItemTransaction",
+        //            new
+        //            {
+        //                SODocEntry = pKL1Line.OrderEntry,
+        //                SOLineNum = pKL1Line.OrderLine,
+        //                PickListDocEntry = pKL1Line.AbsEntry,
+        //                PickListLineNum = pKL1Line.PickEntry,
+        //                ItemCode = pKL1Line.ItemCode,
+        //                ItemDesc = pKL1Line.Dscription,
+        //                Batch = batch.DistNumber,
+        //                Quantity = batch.TransferBatchQty,
+        //                PickAction = action,
+        //                status = status,
+        //                Errormsg = errmsg
+        //            },  
+        //            commandType: System.Data.CommandType.StoredProcedure);
         //    }
-        //    catch (Exception e)
+        //    catch (Exception excep)
         //    {
-        //        LastErrorMessage = $"{e.Message} \n";
-        //        return -1;
+        //        LastErrorMessage = $"{excep.Message} \n";
         //    }
         //}
+     
     }
 }
 
-///// <summary>
-///// Update Pick List and Partially Pick Items in Pick List
-///// </summary>
-///// <param name="PicDoc"></param>
-///// <param name="pKL1s"></param>
-///// <param name="PickHead"></param>
-///// <returns></returns>
-//public int PartialUpdatePickList(int PicDoc, PKL1_Ex[] pKL1s, OPKL_Ex PickHead)
-//{
-//    try
-//    {
-//        if (!_company.connectSAP())
-//        {
-//            throw new Exception(_company.errMsg);
-//        }
-
-//        PickLists oPickLists = null;
-//        PickLists_Lines oPickLists_Lines = null;
-
-//        oPickLists = (PickLists)_company.oCom.GetBusinessObject(BoObjectTypes.oPickLists);
-//        oPickLists.GetByKey(PicDoc);
-//        oPickLists.UserFields.Fields.Item("U_Weight").Value = (double)PickHead.U_Weight;
-
-//        oPickLists_Lines = oPickLists.Lines;
-//        pKL1s.OrderBy(x => x.PickEntry);
-//        foreach (var line in pKL1s)
-//        {
-//            oPickLists_Lines.SetCurrentLine(line.PickEntry);
-//            if (oPickLists_Lines.PickStatus != BoPickStatus.ps_Closed)
-//            {
-//                oPickLists_Lines.PickedQuantity = (double)line.TotalPicked;
-//                oPickLists_Lines.UserFields.Fields.Item("U_Weight").Value = (double)line.U_Weight;
-//                if (line.TotalPicked != 0)
-//                {
-//                    foreach (var batch in line.oBTQList)
-//                    {
-//                        if (batch.TransferBatchQty != 0)
-//                        {
-//                            oPickLists_Lines.BatchNumbers.BatchNumber = batch.DistNumber;
-//                            oPickLists_Lines.BatchNumbers.Quantity = (double)batch.TransferBatchQty;
-//                            oPickLists_Lines.BatchNumbers.BaseLineNumber = line.PickEntry;
-//                            oPickLists_Lines.BatchNumbers.Add();
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        int RetVal = oPickLists.Update();
-
-//        if (RetVal != 0)
-//        {
-//            LastErrorMessage += $"{_company.oCom.GetLastErrorCode()} - {_company.oCom.GetLastErrorDescription()}";
-//            return -1;
-//        }
-//        return RetVal;
-//    }
-//    catch (Exception e)
-//    {
-//        LastErrorMessage += $"{e.Message}";
-//        return -1;
-//    }
-//}
-
-//public DiApiUpdatePickList(IConfiguration configuration, string dbConnectionStr, SAPCompany company)
-//{
-//    _configuration = configuration;
-//    _dbConnectionStr = dbConnectionStr;
-//    _company = company;
-//}
-
-//public SAPParam GetSAPSetting()
-//{
-//    try
-//    {
-//        string query = "SELECT TOP 1 UserName, DBUser [DbUserName],DBPass [DbPassword], SAPCompany [CompanyDB], DBType [DbServerType], LicenseServer [LicenseServer], Server, SAPUser [UserName], SAPPass [Password]  FROM ft_SAPSettings";
-
-//        var conn = new SqlConnection(_dbConnectionStr);
-//        var result = conn.Query<SAPParam>(query).FirstOrDefault();
-
-//        return result;
-//    }
-//    catch (Exception excep)
-//    {
-//        LastErrorMessage = "Fail to Get SAP Setting.";
-//        return null;
-//    }
-//}
-
-//public int GetSAPCompany()
-//{
-//    try
-//    {
-//        var company = GetSAPSetting();
-//        if (company == null) return -1;
-
-//        oCom = new SAPbobsCOM.Company();
-
-//        if (oCom.Connected) return 0;
-
-//        oCom.Server = company.Server;
-//        oCom.CompanyDB = company.CompanyDB;
-//        oCom.DbUserName = company.DbUserName;
-//        oCom.DbPassword = company.DbPassword;
-//        oCom.DbServerType = (SAPbobsCOM.BoDataServerTypes)int.Parse(company.DbServerType);
-//        oCom.UserName = company.UserName;
-//        oCom.Password = company.Password;
-//        oCom.LicenseServer = company.LicenseServer;
-
-//        if (oCom.Connect() != 0)
-//        {
-//            LastErrorMessage = oCom.GetLastErrorDescription();
-//            return -1;
-//        }
-
-//        return 0;
-//    }
-//    catch (Exception e)
-//    {
-//        LastErrorMessage = $"Fail to Connect SAP. {e.Message}";
-//        return -1;
-//    }
-//}

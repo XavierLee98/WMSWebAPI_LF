@@ -51,10 +51,10 @@ namespace WMSWebAPI.Controllers
                 _lastErrorMessage = string.Empty;
                 switch (bag.request)
                 {
-                    case "GetAllPickListAndWarehouse":
-                        {
-                            return GetAllPickListAndWarehouse(bag);
-                        }
+                    //case "GetAllPickListAndWarehouse":
+                    //    {
+                    //        return GetAllPickListAndWarehouse(bag);
+                    //    }
                     case "GetAllPickList":
                         {
                             return GetPickList(bag);
@@ -79,7 +79,10 @@ namespace WMSWebAPI.Controllers
                     //    {
                     //        //return UpdatePickList(bag);
                     //    }
-
+                    case "GetAllWarehouseFilter":
+                        {
+                            return GetAllWarehouseFilter(bag);
+                        }
                     case "PostPickList":
                         {
                             return PostPickList(bag);
@@ -127,10 +130,11 @@ namespace WMSWebAPI.Controllers
             try
             {
                 using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
-                int result = -1;
+                using var diapi = new DiApiUpdatePickList(_dbMidwareConnectionStr, _company);
 
-                result = sqllist.AddBatch(bag.PickItemLine, bag.oBTQ);
-                _lastErrorMessage = sqllist.LastErrorMessage;
+                int result = -1;
+                result = diapi.AssignBatchToSo(bag.PickItemLine, bag.oBTQ);
+                _lastErrorMessage = diapi.LastErrorMessage;
                 if (result < 0)
                 {
                     return BadRequest(_lastErrorMessage);
@@ -149,10 +153,11 @@ namespace WMSWebAPI.Controllers
             try
             {
                 using var sqllist = new SQL_OPKL(_dbMidwareConnectionStr);
+                using var diapi = new DiApiUpdatePickList(_dbMidwareConnectionStr, _company);
                 int result = -1;
 
-                result = sqllist.RemoveBatch(bag.PickItemLine, bag.oBTQ);
-                _lastErrorMessage = sqllist.LastErrorMessage;
+                result = diapi.SOCancelAssignSingleBatch(bag.PickItemLine, bag.oBTQ);
+                _lastErrorMessage = diapi.LastErrorMessage;
                 if (result < 0)
                 {
                     return BadRequest(_lastErrorMessage);
@@ -279,6 +284,28 @@ namespace WMSWebAPI.Controllers
                     return BadRequest(_lastErrorMessage);
                 }
                 return Ok(OPKLs);
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", bag);
+                return BadRequest($"{excep}");
+            }
+        }
+
+        private IActionResult GetAllWarehouseFilter(Cio bag)
+        {
+            try
+            {
+                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr);
+
+                var warehouseList = list.GetPickWarehouse();
+                _lastErrorMessage = list.LastErrorMessage;
+                if (_lastErrorMessage.Length > 0)
+                {
+                    return BadRequest(_lastErrorMessage);
+                }
+                return Ok(warehouseList);
+
             }
             catch (Exception excep)
             {

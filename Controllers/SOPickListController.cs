@@ -133,7 +133,7 @@ namespace WMSWebAPI.Controllers
                 using var diapi = new DiApiUpdatePickList(_dbMidwareConnectionStr, _company);
 
                 int result = -1;
-                result = diapi.AssignBatchToSo(bag.PickItemLine, bag.oBTQ);
+                result = sqllist.AddBatch(bag.PickItemLine, bag.oBTQ);
                 _lastErrorMessage = diapi.LastErrorMessage;
                 if (result < 0)
                 {
@@ -156,7 +156,7 @@ namespace WMSWebAPI.Controllers
                 using var diapi = new DiApiUpdatePickList(_dbMidwareConnectionStr, _company);
                 int result = -1;
 
-                result = diapi.SOCancelAssignSingleBatch(bag.PickItemLine, bag.oBTQ);
+                result = sqllist.RemoveBatch(bag.PickItemLine, bag.oBTQ);
                 _lastErrorMessage = diapi.LastErrorMessage;
                 if (result < 0)
                 {

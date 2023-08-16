@@ -307,6 +307,22 @@ namespace WMSWebAPI.SAP_SQL.PickList
             }
         }
 
+        public string GetPickListStatus(int absentry)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(sapConnStr))
+                {
+                    string query = "SELECT Status FROM OPKL WHERE absentry = @PickNo";
+                    return conn.Query<string>(query, new { PickNo = absentry }).FirstOrDefault();
+                }
+            }
+            catch (Exception excep)
+            {
+                throw new Exception(excep.ToString());
+            }   
+        }
+
         public int InsertBatchVariance(BatchVariance batchVariance)
         {
             int result = -1;
@@ -559,7 +575,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
             try
             {
                 if (dtoRequest == null) return -1;
-                SQLconn = new SqlConnection(sapConnStr);
+                SQLconn = new SqlConnection(midConnStr);
 
                 #region insert request
                 string insertSql = $"INSERT INTO zmwRequest  (" +
@@ -604,6 +620,22 @@ namespace WMSWebAPI.SAP_SQL.PickList
             }
         }
 
+        public int ResetDraftPickList(int absentry)
+        {
+            try
+            {
+                using (var conn = new SqlConnection(midConnStr))
+                {
+                    return conn.Execute("sp_PickList_ClearDraftAllocateItem",new { absentry = absentry },commandType:CommandType.StoredProcedure);
+                }
+            }
+            catch (Exception excep)
+            {
+                LastErrorMessage = $"{excep}";
+                return -1;
+            }
+        }
+
         public int CreateUpdatePickList_Midware(zwaRequest dtoRequest,
             zwaGRPO[] grpoLines, zwaItemBin[] itemBinLine)
         {
@@ -614,7 +646,7 @@ namespace WMSWebAPI.SAP_SQL.PickList
                 if (grpoLines == null) return -1;
                 if (grpoLines.Length == 0) return -1;
 
-                SQLconn = new SqlConnection(sapConnStr);
+                SQLconn = new SqlConnection(midConnStr);
                 SQLconn.Open();
                 SQLtrans = SQLconn.BeginTransaction();
 

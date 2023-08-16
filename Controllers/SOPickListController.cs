@@ -51,10 +51,10 @@ namespace WMSWebAPI.Controllers
                 _lastErrorMessage = string.Empty;
                 switch (bag.request)
                 {
-                    //case "GetAllPickListAndWarehouse":
-                    //    {
-                    //        return GetAllPickListAndWarehouse(bag);
-                    //    }
+                    case "GetAllWarehouseFilter":
+                        {
+                            return GetAllWarehouseFilter(bag);
+                        }
                     case "GetAllPickList":
                         {
                             return GetPickList(bag);
@@ -75,17 +75,33 @@ namespace WMSWebAPI.Controllers
                         {
                             return RemoveBatch(bag);
                         }
-                    //case "UpdatePickList":
-                    //    {
-                    //        //return UpdatePickList(bag);
-                    //    }
-                    case "GetAllWarehouseFilter":
+                    case "InsertBatchVariance":
                         {
-                            return GetAllWarehouseFilter(bag);
+                            return InsertBatchVariance(bag);
+                        }
+                    case "CheckPickListStatus":
+                        {
+                            return CheckPickListStatus(bag);
                         }
                     case "PostPickList":
                         {
                             return PostPickList(bag);
+                        }
+                    case "ResetPickList":
+                        {
+                            return ResetPickList(bag);
+                        }
+                    case "ResetDraftPickList":
+                        {
+                            return ResetDraftPickList(bag);
+                        }
+                    case "ResetPicker":
+                        {
+                            return ResetPicker(bag);
+                        }
+                    case "UpdatePicker":
+                        {
+                            return UpdatePicker(bag);
                         }
                     case "HandleUpdatePickListHeader":
                         {
@@ -99,22 +115,7 @@ namespace WMSWebAPI.Controllers
                         {
                             return GetConfigureItemValidation(bag);
                         }
-                    case "ResetPicker":
-                        {
-                            return ResetPicker(bag);
-                        }
-                    case "InsertBatchVariance":
-                        {
-                            return InsertBatchVariance(bag);
-                        }
-                    case "UpdatePicker":
-                        {
-                            return UpdatePicker(bag);
-                        }
-                    case "ResetPickList":
-                        {
-                            return ResetPickList(bag);
-                        }
+
                 }
                 return BadRequest($"Invalid request, please try again later. Thanks");
             }
@@ -314,37 +315,6 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        private IActionResult GetAllPickListAndWarehouse(Cio bag)
-        {
-            try
-            {
-                using var list = new SQL_OPKL(_dbMidwareConnectionStr,_sapConnectionStr);
-                var dtoPKL = new DTO_OPKL();
-
-                dtoPKL.WarehouseList = list.GetPickWarehouse();
-                _lastErrorMessage = list.LastErrorMessage;
-                if (_lastErrorMessage.Length > 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-
-                var firstWhs = dtoPKL.WarehouseList.FirstOrDefault();
-
-                dtoPKL.OPKLs = list.GetOPKLLists(bag.QueryStartDate, bag.QueryEndDate, firstWhs.WhsCode);
-                _lastErrorMessage = list.LastErrorMessage;
-                if (_lastErrorMessage.Length > 0)
-                {
-                    return BadRequest(_lastErrorMessage);
-                }
-                return Ok(dtoPKL);
-            }
-            catch (Exception excep)
-            {
-                Log($"{excep}", bag);
-                return BadRequest($"{excep}");
-            }
-        }
-
         private IActionResult UpdatePicker(Cio bag)
         {
             try
@@ -359,6 +329,22 @@ namespace WMSWebAPI.Controllers
                 }
 
                 return Ok();
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", bag);
+                return BadRequest($"{excep}");
+            }
+        }
+
+        private IActionResult CheckPickListStatus(Cio bag)
+        {
+            try
+            {
+                using var list = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr);
+
+                var result = list.GetPickListStatus(bag.PickDoc);
+                return Ok(result);
             }
             catch (Exception excep)
             {
@@ -456,15 +442,15 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        IActionResult ResetPickList(Cio bag)
+        IActionResult ResetDraftPickList(Cio bag)
         {
             try
             {
-                using (var updateCount = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr))
+                using (var sql = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr)) 
                 {
-                    var result = updateCount.ResetPickList_Midware(bag.dtoRequest);
+                    var result = sql.ResetDraftPickList(bag.QueryDocEntry);
 
-                    _lastErrorMessage = updateCount.LastErrorMessage;
+                    _lastErrorMessage = sql.LastErrorMessage;
                 }
 
                 if (string.IsNullOrWhiteSpace(_lastErrorMessage))
@@ -481,29 +467,41 @@ namespace WMSWebAPI.Controllers
             }
         }
 
-        //IActionResult UpdatePickList(Cio bag)
-        //{
-        //    try
-        //    {
+        IActionResult ResetPickList(Cio bag)
+        {
+            try
+            {
+                using (var sql = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr))
+                {
+                    var result = sql.ResetPickList_Midware(bag.dtoRequest);
 
-        //    }
-        //    catch (Exception excep)
-        //    {
-        //        Log($"{excep}", bag);
-        //        return BadRequest($"{excep}");
-        //    }
-        //}
+                    _lastErrorMessage = sql.LastErrorMessage;
+                }
+
+                if (string.IsNullOrWhiteSpace(_lastErrorMessage))
+                {
+                    return Ok(bag);
+                }
+
+                return BadRequest(_lastErrorMessage);
+            }
+            catch (Exception excep)
+            {
+                Log($"{excep}", bag);
+                return BadRequest($"{excep}");
+            }
+        }
 
         IActionResult PostPickList(Cio bag)
         {
             try
             {
-                using (var updateCount = new SQL_OPKL(_sapConnectionStr, _dbMidwareConnectionStr))
+                using (var sql = new SQL_OPKL(_dbMidwareConnectionStr, _sapConnectionStr))
                 {
-                    var result = updateCount.CreateUpdatePickList_Midware(
+                    var result = sql.CreateUpdatePickList_Midware(
                         bag.dtoRequest, bag.dtoGRPO, bag.dtoItemBins);
 
-                    _lastErrorMessage = updateCount.LastErrorMessage;
+                    _lastErrorMessage = sql.LastErrorMessage;
                 }
 
                 if (string.IsNullOrWhiteSpace(_lastErrorMessage))
